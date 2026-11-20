@@ -37,8 +37,12 @@ export class WorkoutHistory {
   search(text) {
     const words = text.toLowerCase().split(" ").filter((w) => w !== "");
     return this.workouts.filter((workout) => {
-      const haystack = searchText(workout);
-      return words.every((word) => haystack.includes(word));
+      const haystack = searchText(workout).split(" ");
+      // A number must match a whole word (so "11" finds 11 Nov, not the "11" inside 2026-11-02).
+      // Other words only need to match the start of a word, so "dead" finds Deadlift.
+      return words.every((word) => haystack.some((h) =>
+        /^\d+$/.test(word) ? h === word : h.startsWith(word)
+      ));
     });
   }
 

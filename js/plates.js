@@ -1,6 +1,8 @@
 // Draws a weight as the plates you load on a 20 kg barbell.
 // Plate colours follow the usual competition colours.
 const BAR = 20;
+// Heaviest weight we accept and draw (just above the deadlift world record).
+export const MAX_WEIGHT = 500;
 const PLATES = [25, 20, 15, 10, 5, 2.5, 1.25];
 
 // Returns the plates for ONE side of the bar, heaviest first. Example: 60 kg -> [20]
@@ -18,7 +20,7 @@ export function platesPerSide(kg) {
 
 // Returns the HTML for a small barbell drawing of this weight.
 export function drawBarbell(kg) {
-  if (!kg || kg < BAR) {
+  if (!kg || kg < BAR || kg > MAX_WEIGHT) {
     return '<div class="barbell is-empty" aria-hidden="true"><span class="shaft"></span></div>';
   }
   const plates = platesPerSide(kg);
@@ -33,6 +35,7 @@ export function drawBarbell(kg) {
 
 // Short text version, e.g. "20 + 5 each side".
 export function platesText(kg) {
+  if (kg > MAX_WEIGHT) return `Over ${MAX_WEIGHT} kg, please check`;
   if (!kg || kg < BAR) return "Less than the bar";
   const plates = platesPerSide(kg);
   return plates.length ? `${plates.join(" + ")} each side` : "Just the bar";

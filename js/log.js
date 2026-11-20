@@ -4,7 +4,7 @@ import { isConfigured } from "./firebase.js";
 import { Exercise } from "./exercise.js";
 import { Workout, WorkoutSet } from "./workout.js";
 import { WorkoutHistory } from "./history.js";
-import { drawBarbell, platesText } from "./plates.js";
+import { drawBarbell, platesText, MAX_WEIGHT } from "./plates.js";
 import { kg, dayDate, heaviest, escapeHtml } from "./format.js";
 
 const form = document.getElementById("workout-form");
@@ -135,6 +135,15 @@ form.addEventListener("submit", async (event) => {
   }
   if (!exerciseSelect.value) {
     showNotice("Add an exercise on the Exercises page first.");
+    return;
+  }
+
+  // Stop typing mistakes such as 9085 kg or 600 reps from being saved
+  const tooBig = [...setsBody.querySelectorAll("tr")].some((row) =>
+    Number(row.querySelector(".weight").value) > MAX_WEIGHT || Number(row.querySelector(".reps").value) > 100
+  );
+  if (tooBig) {
+    showNotice(`Please check your sets: the weight must be ${MAX_WEIGHT} kg or less, and reps 100 or less.`);
     return;
   }
 
