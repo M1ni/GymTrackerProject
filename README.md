@@ -28,7 +28,9 @@ A simple gym workout tracker website, built for the ITC 2205 team project at Der
 - `js/page.js`: shared code for the other pages (shows the email, log out, sends logged-out users to the log in page)
 - `js/database.js`: the `Database` class, the one place that reads and writes Firebase
 - `js/exercise.js`, `js/workout.js`, `js/history.js`: the `Exercise`, `Workout`, `WorkoutSet` and `WorkoutHistory` classes from the class diagram
-- `js/exercises-page.js`, `js/log.js`, `js/history-page.js`: code for the Exercises (F2), Log workout (F3) and History (F4) pages
+- `js/exercises-page.js`, `js/log.js`, `js/history-page.js`: code for the Exercises (F2), Log workout (F3) and History with search (F4, F5) pages
+- `js/bests-page.js`: the Personal bests page (F6)
+- `js/plans.js`, `js/plan-page.js`: the `TrainingPlan` class with the 8 ready-made plans, and the Training plan page (F7)
 - `js/format.js`: turns saved data into text, such as "3 × 8 at 57.5 kg"
 - `js/plates.js`: draws a weight as the plates on a 20 kg bar
 - `firestore.rules`: the database rules, also pasted into the Firebase console

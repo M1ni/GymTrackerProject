@@ -1,12 +1,13 @@
-// Code for the History page (F4: view and delete past workouts).
-// Searching (F5) is added in week 5.
+// Code for the History page (F4: view and delete past workouts, F5: search).
 import { whenLoggedIn, showNotice } from "./page.js";
+import { isConfigured } from "./firebase.js";
 import { WorkoutHistory } from "./history.js";
 import { drawBarbell } from "./plates.js";
 import { kg, shortDate, dayName, weekStart, weekTitle, describeSets, groupByExercise, heaviest, escapeHtml } from "./format.js";
 
 const list = document.getElementById("workout-list");
 const subtitle = document.getElementById("subtitle");
+const searchBox = document.getElementById("search-box");
 
 let uid = null;
 let history = new WorkoutHistory([]);
@@ -26,11 +27,22 @@ function workoutHtml(workout, index) {
 }
 
 function render() {
-  const workouts = history.workouts;
-  subtitle.textContent = workouts.length === 1 ? "1 workout" : `${workouts.length} workouts`;
+  const query = searchBox.value.trim();
+  const workouts = query ? history.search(query) : history.workouts;
+  const total = history.workouts.length;
 
-  if (workouts.length === 0) {
+  if (query) {
+    subtitle.textContent = `${workouts.length} of ${total} workouts match "${query}"`;
+  } else {
+    subtitle.textContent = total === 1 ? "1 workout" : `${total} workouts`;
+  }
+
+  if (total === 0) {
     list.innerHTML = '<section class="card"><p class="muted">No workouts yet. <a href="log.html">Log your first workout</a> and it will show here.</p></section>';
+    return;
+  }
+  if (workouts.length === 0) {
+    list.innerHTML = '<section class="card"><p class="muted">No workouts match your search. Try an exercise name, a day such as "friday", or a date such as "13 nov".</p></section>';
     return;
   }
 
@@ -68,6 +80,32 @@ async function deleteWorkout(workout) {
   } catch (error) {
     showNotice("Could not delete the workout. Check your internet connection and try again.");
   }
+}
+
+// F5: search as you type
+searchBox.addEventListener("input", () => {
+  if (isConfigured) {
+    render();
+  } else {
+    filterSample();
+  }
+});
+
+// Preview mode: search the sample workouts already on the page
+function filterSample() {
+  const words = searchBox.value.toLowerCase().split(" ").filter((w) => w !== "");
+  let shown = 0;
+  list.querySelectorAll(".week").forEach((week) => {
+    let shownInWeek = 0;
+    week.querySelectorAll(".workout").forEach((article) => {
+      const match = words.every((word) => article.textContent.toLowerCase().includes(word));
+      article.hidden = !match;
+      if (match) shownInWeek++;
+    });
+    week.hidden = shownInWeek === 0;
+    shown = shown + shownInWeek;
+  });
+  subtitle.textContent = words.length ? `${shown} of 5 sample workouts match "${searchBox.value.trim()}"` : "5 workouts in the last two weeks";
 }
 
 whenLoggedIn(async (user) => {

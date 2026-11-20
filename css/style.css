@@ -753,7 +753,7 @@ tbody tr {
 
 .plan-days {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: var(--gap);
 }
 
@@ -1146,4 +1146,9 @@ tbody tr {
   overflow: hidden;
   clip: rect(0 0 0 0);
   white-space: nowrap;
+}
+
+/* Make sure hidden things stay hidden, even ones with display set above */
+[hidden] {
+  display: none !important;
 }

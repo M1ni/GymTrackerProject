@@ -1,6 +1,6 @@
 // The WorkoutHistory class from our class diagram (F4).
-// Searching (F5) and personal bests (F6) are added in week 5.
 import { Database } from "./database.js";
+import { searchText } from "./format.js";
 import { Workout, WorkoutSet } from "./workout.js";
 
 export class WorkoutHistory {
@@ -31,5 +31,33 @@ export class WorkoutHistory {
       });
     });
     return result;
+  }
+
+  // F5: the workouts that match every word typed, e.g. "squat", "13 nov", "friday" or "bench nov".
+  search(text) {
+    const words = text.toLowerCase().split(" ").filter((w) => w !== "");
+    return this.workouts.filter((workout) => {
+      const haystack = searchText(workout);
+      return words.every((word) => haystack.includes(word));
+    });
+  }
+
+  // F6: the heaviest weight for each exercise, heaviest first,
+  // with the date it was first lifted.
+  getPersonalBests() {
+    const bests = [];
+    // Go from oldest to newest, so a later equal weight does not replace the first date
+    [...this.workouts].reverse().forEach((workout) => {
+      workout.sets.forEach((set) => {
+        const best = bests.find((b) => b.exerciseName === set.exerciseName);
+        if (!best) {
+          bests.push({ exerciseName: set.exerciseName, weight: set.weight, date: workout.date });
+        } else if (set.weight > best.weight) {
+          best.weight = set.weight;
+          best.date = workout.date;
+        }
+      });
+    });
+    return bests.sort((a, b) => b.weight - a.weight || a.exerciseName.localeCompare(b.exerciseName));
   }
 }

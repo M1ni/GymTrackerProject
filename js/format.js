@@ -88,3 +88,17 @@ export function escapeHtml(text) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;");
 }
+
+// All the words a workout can be found by: its date written in different ways and its exercises.
+export function searchText(workout) {
+  const d = toDate(workout.date);
+  const exercises = workout.sets.map((s) => s.exerciseName).join(" ");
+  return [
+    workout.date,
+    shortDate(workout.date),
+    dayName(workout.date),
+    LONG_MONTHS[d.getMonth()],
+    String(d.getFullYear()),
+    exercises
+  ].join(" ").toLowerCase();
+}
