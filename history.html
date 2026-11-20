@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Workout history - GymTrack</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <a href="log.html" class="brand"><svg viewBox="0 0 28 28" aria-hidden="true"><rect x="1" y="13" width="26" height="2" rx="1" fill="#141414"/><rect x="6" y="5" width="4" height="18" rx="1" fill="#1d5fbf"/><rect x="18" y="5" width="4" height="18" rx="1" fill="#1d5fbf"/><rect x="3" y="9" width="2.5" height="10" rx="1" fill="#c4242a"/><rect x="22.5" y="9" width="2.5" height="10" rx="1" fill="#c4242a"/></svg>GymTrack</a>
+      <nav class="menu" aria-label="Main menu">
+        <a href="log.html"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3v10M3 8h10"/></svg><span class="long">Log workout</span><span class="short">Log</span></a>
+        <a href="history.html" class="active" aria-current="page"><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6"/><path d="M8 5v3l2 1.5"/></svg>History</a>
+        <a href="exercises.html"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M6 4h7.5M6 8h7.5M6 12h7.5M2.5 4h.5M2.5 8h.5M2.5 12h.5"/></svg>Exercises</a>
+        <a href="bests.html"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M5 2.5h6v3a3 3 0 0 1-6 0zM8 8.5v3.5M5.5 13.5h5M5 3.5H3a2 2 0 0 0 2.2 2.5M11 3.5h2a2 2 0 0 1-2.2 2.5"/></svg>Bests</a>
+        <a href="plan.html"><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="2.5" y="3.5" width="11" height="10" rx="1.5"/><path d="M2.5 6.5h11M5.5 2v3M10.5 2v3"/></svg>Plan</a>
+      </nav>
+      <div class="account">
+        <span id="user-email">Not logged in</span>
+        <button id="logout-button" class="text-button">Log out</button>
+      </div>
+    </aside>
+
+    <div>
+      <header class="phone-bar">
+        <a href="log.html" class="brand"><svg viewBox="0 0 28 28" aria-hidden="true"><rect x="1" y="13" width="26" height="2" rx="1" fill="#141414"/><rect x="6" y="5" width="4" height="18" rx="1" fill="#1d5fbf"/><rect x="18" y="5" width="4" height="18" rx="1" fill="#1d5fbf"/><rect x="3" y="9" width="2.5" height="10" rx="1" fill="#c4242a"/><rect x="22.5" y="9" width="2.5" height="10" rx="1" fill="#c4242a"/></svg>GymTrack</a>
+        <button id="logout-button-phone" class="text-button">Log out</button>
+      </header>
+
+      <main class="content">
+        <p id="notice" class="notice" hidden></p>
+
+        <div class="title-row">
+          <div>
+            <h1>Workout history</h1>
+            <p id="subtitle">5 workouts in the last two weeks</p>
+          </div>
+        </div>
+
+        <!-- Sample data so the design can be seen. Replaced by the real data in weeks 4 and 5. -->
+        <label class="search">
+          <span class="visually-hidden">Search workouts</span>
+          <svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="4.5"/><path d="m10.5 10.5 3 3"/></svg>
+          <input type="search" id="search-box" placeholder="Search by exercise or date, e.g. squat or 13 Nov">
+        </label>
+
+        <div id="workout-list">
+          <section class="card week">
+            <h2>Week of 9 November</h2>
+            <article class="workout">
+              <div class="workout-date"><strong>13 Nov</strong><span>Friday</span></div>
+              <ul class="workout-lifts">
+                  <li>Bench press <span>3 × 8 at 57.5 kg</span></li>
+                  <li>Shoulder press <span>3 × 8 at 35 kg</span></li>
+                  <li>Squat <span>3 × 5 at 85 kg</span></li>
+              </ul>
+              <div class="workout-top"><span data-barbell="85"></span><span class="num">Heaviest set <strong>85 kg</strong></span></div>
+              <div class="workout-side"><span class="num">9 sets</span><button class="text-button">Delete</button></div>
+            </article>
+            <article class="workout">
+              <div class="workout-date"><strong>11 Nov</strong><span>Wednesday</span></div>
+              <ul class="workout-lifts">
+                  <li>Deadlift <span>3 × 5 at 100 kg</span></li>
+                  <li>Barbell row <span>3 × 10 at 40 kg</span></li>
+              </ul>
+              <div class="workout-top"><span data-barbell="100"></span><span class="num">Heaviest set <strong>100 kg</strong></span></div>
+              <div class="workout-side"><span class="num">6 sets</span><button class="text-button">Delete</button></div>
+            </article>
+            <article class="workout">
+              <div class="workout-date"><strong>9 Nov</strong><span>Monday</span></div>
+              <ul class="workout-lifts">
+                  <li>Bench press <span>10, 8, 6 reps at 50, 55, 60 kg</span></li>
+                  <li>Squat <span>3 × 8 at 80 kg</span></li>
+              </ul>
+              <div class="workout-top"><span data-barbell="80"></span><span class="num">Heaviest set <strong>80 kg</strong></span></div>
+              <div class="workout-side"><span class="num">6 sets</span><button class="text-button">Delete</button></div>
+            </article>
+          </section>
+
+          <section class="card week">
+            <h2>Week of 2 November</h2>
+            <article class="workout">
+              <div class="workout-date"><strong>6 Nov</strong><span>Friday</span></div>
+              <ul class="workout-lifts">
+                  <li>Deadlift <span>3 × 8 at 90 kg</span></li>
+                  <li>Shoulder press <span>3 × 10 at 30 kg</span></li>
+              </ul>
+              <div class="workout-top"><span data-barbell="90"></span><span class="num">Heaviest set <strong>90 kg</strong></span></div>
+              <div class="workout-side"><span class="num">6 sets</span><button class="text-button">Delete</button></div>
+            </article>
+            <article class="workout">
+              <div class="workout-date"><strong>4 Nov</strong><span>Wednesday</span></div>
+              <ul class="workout-lifts">
+                  <li>Bench press <span>3 × 10 at 50 kg</span></li>
+                  <li>Squat <span>3 × 10 at 70 kg</span></li>
+              </ul>
+              <div class="workout-top"><span data-barbell="70"></span><span class="num">Heaviest set <strong>70 kg</strong></span></div>
+              <div class="workout-side"><span class="num">6 sets</span><button class="text-button">Delete</button></div>
+            </article>
+          </section>
+        </div>
+
+      </main>
+    </div>
+  </div>
+
+  <script type="module" src="js/page.js"></script>
+</body>
+</html>

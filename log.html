@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Log a workout - GymTrack</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <a href="log.html" class="brand"><svg viewBox="0 0 28 28" aria-hidden="true"><rect x="1" y="13" width="26" height="2" rx="1" fill="#141414"/><rect x="6" y="5" width="4" height="18" rx="1" fill="#1d5fbf"/><rect x="18" y="5" width="4" height="18" rx="1" fill="#1d5fbf"/><rect x="3" y="9" width="2.5" height="10" rx="1" fill="#c4242a"/><rect x="22.5" y="9" width="2.5" height="10" rx="1" fill="#c4242a"/></svg>GymTrack</a>
+      <nav class="menu" aria-label="Main menu">
+        <a href="log.html" class="active" aria-current="page"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3v10M3 8h10"/></svg><span class="long">Log workout</span><span class="short">Log</span></a>
+        <a href="history.html"><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6"/><path d="M8 5v3l2 1.5"/></svg>History</a>
+        <a href="exercises.html"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M6 4h7.5M6 8h7.5M6 12h7.5M2.5 4h.5M2.5 8h.5M2.5 12h.5"/></svg>Exercises</a>
+        <a href="bests.html"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M5 2.5h6v3a3 3 0 0 1-6 0zM8 8.5v3.5M5.5 13.5h5M5 3.5H3a2 2 0 0 0 2.2 2.5M11 3.5h2a2 2 0 0 1-2.2 2.5"/></svg>Bests</a>
+        <a href="plan.html"><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="2.5" y="3.5" width="11" height="10" rx="1.5"/><path d="M2.5 6.5h11M5.5 2v3M10.5 2v3"/></svg>Plan</a>
+      </nav>
+      <div class="account">
+        <span id="user-email">Not logged in</span>
+        <button id="logout-button" class="text-button">Log out</button>
+      </div>
+    </aside>
+
+    <div>
+      <header class="phone-bar">
+        <a href="log.html" class="brand"><svg viewBox="0 0 28 28" aria-hidden="true"><rect x="1" y="13" width="26" height="2" rx="1" fill="#141414"/><rect x="6" y="5" width="4" height="18" rx="1" fill="#1d5fbf"/><rect x="18" y="5" width="4" height="18" rx="1" fill="#1d5fbf"/><rect x="3" y="9" width="2.5" height="10" rx="1" fill="#c4242a"/><rect x="22.5" y="9" width="2.5" height="10" rx="1" fill="#c4242a"/></svg>GymTrack</a>
+        <button id="logout-button-phone" class="text-button">Log out</button>
+      </header>
+
+      <main class="content">
+        <p id="notice" class="notice" hidden></p>
+
+        <div class="title-row">
+          <div>
+            <h1>Log a workout</h1>
+            <p id="subtitle">Pick an exercise, then add each set as you finish it.</p>
+          </div>
+        </div>
+
+        <!-- Sample data so the design can be seen. Replaced by the real data in weeks 4 and 5. -->
+        <div class="split">
+          <form id="workout-form" class="card">
+            <div class="fields">
+              <label>Exercise
+                <select id="workout-exercise">
+                  <option>Bench press</option>
+                  <option>Squat</option>
+                  <option>Deadlift</option>
+                  <option>Shoulder press</option>
+                  <option>Barbell row</option>
+                </select>
+              </label>
+              <label>Date
+                <input type="date" id="workout-date" required>
+              </label>
+            </div>
+
+            <table class="sets">
+              <thead>
+                <tr><th>Set</th><th>Weight (kg)</th><th>Reps</th><th>Plates</th></tr>
+              </thead>
+              <tbody id="sets-body">
+                <tr>
+                  <td class="set-number">1</td>
+                  <td><input type="number" class="weight" min="0" step="1.25" aria-label="Weight in kg for set 1"></td>
+                  <td><input type="number" class="reps" min="1" aria-label="Reps for set 1"></td>
+                  <td class="plates-cell"><div class="plates"></div><span class="plates-text"></span></td>
+                </tr>
+              </tbody>
+            </table>
+
+            <div class="form-foot">
+              <button type="button" id="add-set" class="secondary">+ Add set</button>
+              <div class="row-end">
+                <span id="set-summary" class="muted num"></span>
+                <button type="submit">Save workout</button>
+              </div>
+            </div>
+          </form>
+
+          <div class="stack">
+            <section class="card">
+              <div class="card-head">
+                <h2>Last time</h2>
+                <a href="history.html">History</a>
+              </div>
+              <p class="muted" style="margin-bottom:12px">Bench press on Fri 13 Nov</p>
+              <ul class="mini-list">
+                <li><span>Set 1</span><span>8 reps at 57.5 kg</span></li>
+                <li><span>Set 2</span><span>8 reps at 57.5 kg</span></li>
+                <li><span>Set 3</span><span>8 reps at 57.5 kg</span></li>
+              </ul>
+            </section>
+
+            <section class="card">
+              <div class="card-head">
+                <h2>Best bench press</h2>
+                <a href="bests.html">All bests</a>
+              </div>
+              <div class="side-figure">
+                <span class="figure">60<small>kg</small></span>
+                <span data-barbell="60"></span>
+              </div>
+              <p class="muted">Lifted on Mon 9 Nov. Heaviest set of each bench press workout:</p>
+              <ul class="mini-list best-history">
+                <li><span>Fri 13 Nov</span><span>57.5 kg</span></li>
+                <li><span>Mon 9 Nov</span><span>60 kg</span></li>
+                <li><span>Wed 4 Nov</span><span>50 kg</span></li>
+              </ul>
+            </section>
+          </div>
+        </div>
+
+      </main>
+    </div>
+  </div>
+
+  <script type="module" src="js/page.js"></script>
+  <script type="module" src="js/log.js"></script>
+</body>
+</html>

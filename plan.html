@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>My training plan - GymTrack</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <a href="log.html" class="brand"><svg viewBox="0 0 28 28" aria-hidden="true"><rect x="1" y="13" width="26" height="2" rx="1" fill="#141414"/><rect x="6" y="5" width="4" height="18" rx="1" fill="#1d5fbf"/><rect x="18" y="5" width="4" height="18" rx="1" fill="#1d5fbf"/><rect x="3" y="9" width="2.5" height="10" rx="1" fill="#c4242a"/><rect x="22.5" y="9" width="2.5" height="10" rx="1" fill="#c4242a"/></svg>GymTrack</a>
+      <nav class="menu" aria-label="Main menu">
+        <a href="log.html"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3v10M3 8h10"/></svg><span class="long">Log workout</span><span class="short">Log</span></a>
+        <a href="history.html"><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6"/><path d="M8 5v3l2 1.5"/></svg>History</a>
+        <a href="exercises.html"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M6 4h7.5M6 8h7.5M6 12h7.5M2.5 4h.5M2.5 8h.5M2.5 12h.5"/></svg>Exercises</a>
+        <a href="bests.html"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M5 2.5h6v3a3 3 0 0 1-6 0zM8 8.5v3.5M5.5 13.5h5M5 3.5H3a2 2 0 0 0 2.2 2.5M11 3.5h2a2 2 0 0 1-2.2 2.5"/></svg>Bests</a>
+        <a href="plan.html" class="active" aria-current="page"><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="2.5" y="3.5" width="11" height="10" rx="1.5"/><path d="M2.5 6.5h11M5.5 2v3M10.5 2v3"/></svg>Plan</a>
+      </nav>
+      <div class="account">
+        <span id="user-email">Not logged in</span>
+        <button id="logout-button" class="text-button">Log out</button>
+      </div>
+    </aside>
+
+    <div>
+      <header class="phone-bar">
+        <a href="log.html" class="brand"><svg viewBox="0 0 28 28" aria-hidden="true"><rect x="1" y="13" width="26" height="2" rx="1" fill="#141414"/><rect x="6" y="5" width="4" height="18" rx="1" fill="#1d5fbf"/><rect x="18" y="5" width="4" height="18" rx="1" fill="#1d5fbf"/><rect x="3" y="9" width="2.5" height="10" rx="1" fill="#c4242a"/><rect x="22.5" y="9" width="2.5" height="10" rx="1" fill="#c4242a"/></svg>GymTrack</a>
+        <button id="logout-button-phone" class="text-button">Log out</button>
+      </header>
+
+      <main class="content">
+        <p id="notice" class="notice" hidden></p>
+
+        <div class="title-row">
+          <div>
+            <h1>My training plan</h1>
+            <p id="subtitle">Choose a goal, level and days per week to get a ready-made plan.</p>
+          </div>
+        </div>
+
+        <!-- Sample data so the design can be seen. Replaced by the real data in weeks 4 and 5. -->
+        <form id="plan-form" class="card">
+          <div class="fields" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr)) auto;align-items:end;margin-bottom:0">
+            <label>Goal
+              <select id="plan-goal"><option>Build muscle</option><option>Get stronger</option></select>
+            </label>
+            <label>Level
+              <select id="plan-level"><option>Beginner</option><option>Intermediate</option></select>
+            </label>
+            <label>Days per week
+              <select id="plan-days"><option>3</option><option>4</option></select>
+            </label>
+            <button type="submit">Show my plan</button>
+          </div>
+        </form>
+
+        <section id="plan-result" class="card" style="margin-top:12px">
+          <h2>Build muscle, beginner, 3 days a week</h2>
+          <p class="muted" style="margin-top:4px">Train on three days with a rest day after each. Add 2.5 kg when every set feels easy.</p>
+          <div class="week-strip">
+            <div class="day train"><strong>Mon</strong>Day 1 · Push</div>
+            <div class="day"><strong>Tue</strong>Rest</div>
+            <div class="day train"><strong>Wed</strong>Day 2 · Legs</div>
+            <div class="day"><strong>Thu</strong>Rest</div>
+            <div class="day train"><strong>Fri</strong>Day 3 · Pull</div>
+            <div class="day"><strong>Sat</strong>Rest</div>
+            <div class="day"><strong>Sun</strong>Rest</div>
+          </div>
+          <div class="plan-days">
+            <div class="plan-day">
+              <h3>Day 1 · Push</h3>
+              <ul class="mini-list"><li><span>Bench press</span><span>3 × 10</span></li><li><span>Shoulder press</span><span>3 × 10</span></li><li><span>Triceps dips</span><span>3 × 12</span></li></ul>
+            </div>
+            <div class="plan-day">
+              <h3>Day 2 · Legs</h3>
+              <ul class="mini-list"><li><span>Squat</span><span>3 × 10</span></li><li><span>Lunges</span><span>3 × 10 each leg</span></li><li><span>Calf raises</span><span>3 × 15</span></li></ul>
+            </div>
+            <div class="plan-day">
+              <h3>Day 3 · Pull</h3>
+              <ul class="mini-list"><li><span>Deadlift</span><span>3 × 8</span></li><li><span>Barbell row</span><span>3 × 10</span></li><li><span>Biceps curls</span><span>3 × 12</span></li></ul>
+            </div>
+          </div>
+        </section>
+
+      </main>
+    </div>
+  </div>
+
+  <script type="module" src="js/page.js"></script>
+</body>
+</html>

@@ -1,0 +1,60 @@
+// The User class from our class diagram (F1: register, log in, log out).
+// Firebase Authentication checks and stores the passwords, so we never store them (NFR4).
+import {
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  signOut,
+  onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/13.1.0/firebase-auth.js";
+import { auth } from "./firebase.js";
+
+export class User {
+  constructor(uid, email) {
+    this.uid = uid;
+    this.email = email;
+  }
+
+  // FR1: create a new account.
+  static async register(email, password) {
+    const result = await createUserWithEmailAndPassword(auth, email, password);
+    return new User(result.user.uid, result.user.email);
+  }
+
+  // FR2: log in to an existing account.
+  static async logIn(email, password) {
+    const result = await signInWithEmailAndPassword(auth, email, password);
+    return new User(result.user.uid, result.user.email);
+  }
+
+  // FR2: log out.
+  static async logOut() {
+    await signOut(auth);
+  }
+
+  // Calls whenChecked with the logged-in User, or null if nobody is logged in.
+  static watch(whenChecked) {
+    onAuthStateChanged(auth, (firebaseUser) => {
+      if (firebaseUser) {
+        whenChecked(new User(firebaseUser.uid, firebaseUser.email));
+      } else {
+        whenChecked(null);
+      }
+    });
+  }
+}
+
+// Turns Firebase error codes into messages a user can understand.
+export function friendlyError(error) {
+  const messages = {
+    "auth/invalid-credential": "Wrong email or password.",
+    "auth/wrong-password": "Wrong email or password.",
+    "auth/user-not-found": "Wrong email or password.",
+    "auth/email-already-in-use": "An account with this email already exists. Try logging in.",
+    "auth/weak-password": "The password must be at least 6 characters.",
+    "auth/invalid-email": "Please enter a valid email address.",
+    "auth/missing-password": "Please enter your password.",
+    "auth/too-many-requests": "Too many attempts. Please wait a minute and try again.",
+    "auth/network-request-failed": "No internet connection. Please try again."
+  };
+  return messages[error.code] || "Something went wrong. Please try again.";
+}
