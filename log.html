@@ -77,7 +77,7 @@
             <div class="form-foot">
               <button type="button" id="add-set" class="secondary">+ Add set</button>
               <div class="row-end">
-                <span id="set-summary" class="muted num"></span>
+                <span id="set-summary" class="muted num" aria-live="polite"></span>
                 <button type="submit">Save workout</button>
               </div>
             </div>
@@ -89,8 +89,8 @@
                 <h2>Last time</h2>
                 <a href="history.html">History</a>
               </div>
-              <p class="muted" style="margin-bottom:12px">Bench press on Fri 13 Nov</p>
-              <ul class="mini-list">
+              <p id="last-time-title" class="muted" style="margin-bottom:12px">Bench press on Fri 13 Nov</p>
+              <ul id="last-time-list" class="mini-list">
                 <li><span>Set 1</span><span>8 reps at 57.5 kg</span></li>
                 <li><span>Set 2</span><span>8 reps at 57.5 kg</span></li>
                 <li><span>Set 3</span><span>8 reps at 57.5 kg</span></li>
@@ -99,15 +99,15 @@
 
             <section class="card">
               <div class="card-head">
-                <h2>Best bench press</h2>
+                <h2 id="best-title">Best bench press</h2>
                 <a href="bests.html">All bests</a>
               </div>
               <div class="side-figure">
-                <span class="figure">60<small>kg</small></span>
-                <span data-barbell="60"></span>
+                <span id="best-figure" class="figure">60<small>kg</small></span>
+                <span id="best-barbell" data-barbell="60"></span>
               </div>
-              <p class="muted">Lifted on Mon 9 Nov. Heaviest set of each bench press workout:</p>
-              <ul class="mini-list best-history">
+              <p id="best-date" class="muted">Lifted on Mon 9 Nov. Heaviest set of each bench press workout:</p>
+              <ul id="best-history" class="mini-list best-history">
                 <li><span>Fri 13 Nov</span><span>57.5 kg</span></li>
                 <li><span>Mon 9 Nov</span><span>60 kg</span></li>
                 <li><span>Wed 4 Nov</span><span>50 kg</span></li>
@@ -120,7 +120,6 @@
     </div>
   </div>
 
-  <script type="module" src="js/page.js"></script>
   <script type="module" src="js/log.js"></script>
 </body>
 </html>

@@ -37,7 +37,9 @@ form.addEventListener("submit", async (event) => {
   errorBox.hidden = true;
 
   if (!isConfigured) {
-    showError("Firebase is not set up yet, so accounts cannot be created.");
+    // Preview mode: no Firebase yet, so any email and password opens the site.
+    // This stops working by itself once firebase-config.js has the real values.
+    window.location.href = "log.html";
     return;
   }
 
@@ -63,6 +65,6 @@ if (isConfigured) {
     }
   });
 } else {
-  notice.innerHTML = 'Preview mode: Firebase is not set up yet, so log in does not work. <a href="log.html">See the other pages</a>';
+  notice.innerHTML = 'Preview mode: Firebase is not set up yet, so any email and password will let you in. Nothing is saved.';
   notice.hidden = false;
 }

@@ -11,6 +11,21 @@ const logoutButtons = [
   document.getElementById("logout-button-phone")
 ];
 
+let whenReady = null;
+
+// Each page calls this with the code that loads its real data.
+// It runs once we know who is logged in. In preview mode it never runs,
+// so the sample data in the HTML stays on the page.
+export function whenLoggedIn(callback) {
+  whenReady = callback;
+}
+
+// Shows a message at the top of the page, e.g. when saving fails.
+export function showNotice(message) {
+  notice.textContent = message;
+  notice.hidden = false;
+}
+
 drawAllBarbells();
 
 if (isConfigured) {
@@ -18,6 +33,9 @@ if (isConfigured) {
   User.watch((user) => {
     if (user) {
       emailText.textContent = user.email;
+      if (whenReady) {
+        whenReady(user);
+      }
     } else {
       window.location.href = "index.html";
     }
@@ -30,8 +48,7 @@ if (isConfigured) {
     });
   });
 } else {
-  notice.textContent = "Preview mode: Firebase is not set up yet, so you are seeing sample workouts and nothing is saved.";
-  notice.hidden = false;
+  showNotice("Preview mode: Firebase is not set up yet, so you are seeing sample workouts and nothing is saved.");
   emailText.textContent = "Preview mode";
   logoutButtons.forEach((button) => {
     button.addEventListener("click", () => {
