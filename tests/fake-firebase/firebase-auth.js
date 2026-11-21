@@ -17,6 +17,14 @@ function tellListeners() {
   listeners.forEach((callback) => callback(auth.currentUser));
 }
 
+export const indexedDBLocalPersistence = { type: "LOCAL" };
+export const browserLocalPersistence = { type: "LOCAL" };
+export const browserSessionPersistence = { type: "SESSION" };
+
+export function initializeAuth() {
+  return getAuth();
+}
+
 export function getAuth() {
   auth.currentUser = loggedInUser();
   return auth;
@@ -72,6 +80,7 @@ export async function sendPasswordResetEmail(_auth, email) {
 export function onAuthStateChanged(_auth, callback) {
   listeners.push(callback);
   // Like the real one, the first call comes a moment later, once the saved login is checked
-  setTimeout(() => callback(loggedInUser()), 50);
+  // (state.authDelay makes that check slow)
+  setTimeout(() => callback(loggedInUser()), load().authDelay ?? 50);
   return () => listeners.splice(listeners.indexOf(callback), 1);
 }

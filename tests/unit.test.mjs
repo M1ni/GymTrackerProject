@@ -545,3 +545,28 @@ test("logging out deletes the copy", async () => {
   await User.logOut();
   assert.deepEqual(copies(), []);
 });
+
+// ---------- Fast pages: each page lists every script it uses ----------
+
+test("each page preloads exactly the scripts it uses (so they load all at once)", async () => {
+  const { readFile } = await import("node:fs/promises");
+  const { join, dirname, normalize } = await import("node:path");
+  const root = new URL("..", import.meta.url).pathname;
+  const scriptsOf = async (file, found = new Set()) => {
+    if (found.has(file)) return found;
+    found.add(file);
+    if (file.startsWith("https://")) return found;
+    const code = await readFile(join(root, file), "utf8");
+    for (const [, dep] of code.matchAll(/(?:import|from)\s*["']([^"']+)["']/g)) {
+      await scriptsOf(dep.startsWith("https://") ? dep : normalize(join(dirname(file), dep)), found);
+    }
+    return found;
+  };
+  for (const page of ["index.html", "log.html", "history.html", "exercises.html", "bests.html", "plan.html"]) {
+    const html = await readFile(join(root, page), "utf8");
+    const entry = html.match(/<script type="module" src="([^"]+)"/)[1];
+    const used = [...await scriptsOf(entry)].sort();
+    const preloaded = [...html.matchAll(/<link rel="modulepreload" href="([^"]+)">/g)].map((m) => m[1]).sort();
+    assert.deepEqual(preloaded, used, `${page}: the modulepreload list is out of date`);
+  }
+});

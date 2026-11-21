@@ -690,6 +690,22 @@ test("21b. a page you have opened before shows at once, even on a slow connectio
     assert.ok(withoutCopy > 1500, `without a copy it took ${withoutCopy} ms`);
     t.diagnostic(`History on a slow connection: ${withCopy} ms with the copy, ${withoutCopy} ms without`);
 
+    // With a copy, the page does not even wait for the login check
+    await setFake("s.delay = 20; s.authDelay = 1500");
+    await open(page, "history.html");
+    const withSlowLogin = await timeToShow("history.html");
+    assert.ok(withSlowLogin < 1000, `History waited for a slow login check (${withSlowLogin} ms)`);
+    t.diagnostic(`History with a 1.5 s login check: ${withSlowLogin} ms`);
+    await setFake("s.authDelay = 50");
+
+    // A copy that belongs to someone else is thrown away, and the page shows your own data
+    await page.evaluate(() => localStorage.setItem("gymtrack-copy:owner", JSON.stringify({ uid: "someone-else", email: "x@y.co" })));
+    await page.goto(base + "history.html");
+    await page.waitForFunction(() => JSON.parse(localStorage.getItem("gymtrack-copy:owner") || "{}").uid !== "someone-else");
+    await waitForReady(page);
+    assert.match(await page.locator("#workout-list").innerText(), /20 Nov/);
+    assert.equal(await page.locator("#user-email").innerText(), "andrew@example.com");
+
     // A workout saved on another device appears by itself after the background check
     await setFake(`s.delay = 300; s.docs["users/" + s.current + "/workouts/phone1"] =
       { date: "2026-11-18", savedAt: 1, sets: [{ exerciseName: "Squat", reps: 3, weight: 65 }] };`);
@@ -699,7 +715,7 @@ test("21b. a page you have opened before shows at once, even on a slow connectio
     assert.deepEqual(await shownDates(page), ["20 Nov", "18 Nov", "9 Nov"], "then the new workout");
   } finally {
     // Back to normal for the next steps
-    await setFake(`s.delay = 20; delete s.docs["users/" + s.current + "/workouts/phone1"];`);
+    await setFake(`s.delay = 20; s.authDelay = 50; delete s.docs["users/" + s.current + "/workouts/phone1"];`);
     await page.evaluate(() => Object.keys(localStorage).filter((k) => k.startsWith("gymtrack-copy:")).forEach((k) => localStorage.removeItem(k)));
   }
 });
