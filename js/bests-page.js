@@ -1,13 +1,18 @@
 // Code for the Personal bests page (F6).
 import { whenLoggedIn } from "./page.js";
 import { WorkoutHistory } from "./history.js";
-import { drawBarbell, platesText } from "./plates.js";
+import { drawBarbell, platesText, BAR } from "./plates.js";
 import { kg, shortDate, dayDate, escapeHtml } from "./format.js";
 
 const top = document.getElementById("top-best");
 const list = document.getElementById("bests-body");
 const listCard = document.getElementById("other-bests");
 const subtitle = document.getElementById("subtitle");
+
+// The plates text, or nothing for lighter lifts such as dumbbells (12 kg is not "less than the bar")
+function platesFor(weight) {
+  return weight >= BAR ? platesText(weight) : "";
+}
 
 function render(history) {
   const bests = history.getPersonalBests();
@@ -26,7 +31,7 @@ function render(history) {
       <h2>Heaviest lift</h2>
       <p class="muted" style="margin:4px 0 16px">${escapeHtml(first.exerciseName)} on ${dayDate(first.date)}</p>
       <span class="figure">${kg(first.weight)}<small>kg</small></span>
-      <p class="muted" style="margin-top:8px">${platesText(first.weight)} on a 20 kg bar</p>
+      ${first.weight >= BAR ? `<p class="muted" style="margin-top:8px">${platesFor(first.weight)} on a 20 kg bar</p>` : ""}
     </div>
     ${drawBarbell(first.weight)}`;
 
@@ -36,7 +41,7 @@ function render(history) {
   list.innerHTML = others.map((b) => `<tr class="best">
       <td class="exercise"><strong>${escapeHtml(b.exerciseName)}</strong><span>${shortDate(b.date)}</span></td>
       <td class="barbell-cell">${drawBarbell(b.weight)}</td>
-      <td class="right"><span class="figure">${kg(b.weight)}<small>kg</small></span><span class="plates-text">${platesText(b.weight)}</span></td>
+      <td class="right"><span class="figure">${kg(b.weight)}<small>kg</small></span><span class="plates-text">${platesFor(b.weight)}</span></td>
     </tr>`).join("");
 }
 

@@ -1,6 +1,6 @@
 // Draws a weight as the plates you load on a 20 kg barbell.
 // Plate colours follow the usual competition colours.
-const BAR = 20;
+export const BAR = 20;
 // Heaviest weight we accept and draw (just above the deadlift world record).
 export const MAX_WEIGHT = 500;
 const PLATES = [25, 20, 15, 10, 5, 2.5, 1.25];
