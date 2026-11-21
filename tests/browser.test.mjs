@@ -102,8 +102,12 @@ after(async () => {
 
 const clean = (text) => text.replace(/\s+/g, " ").trim();
 const fakeData = (tab) => tab.evaluate(() => JSON.parse(localStorage.getItem("fakeFirebase")));
-const workoutDocs = async (tab, date) => Object.entries((await fakeData(tab)).docs)
-  .filter(([path, data]) => path.includes("/workouts/") && data.date === date);
+// The logged-in user's saved workout documents for one date
+const workoutDocs = async (tab, date) => {
+  const state = await fakeData(tab);
+  return Object.entries(state.docs)
+    .filter(([path, data]) => path.startsWith(`users/${state.current}/workouts/`) && data.date === date);
+};
 
 async function setOffline(tab, offline) {
   await tab.evaluate((value) => {
@@ -203,6 +207,11 @@ async function setDate(tab, date) {
 const todayNames = (tab) => tab.locator("#today-list li > span:first-child").allInnerTexts();
 const todayTotal = (tab) => tab.locator("#today-total").innerText();
 
+// Exercises page: the row of one exercise, by its exact name
+const escapeRegex = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const exerciseRow = (tab, name) => tab.locator("#exercise-list tr")
+  .filter({ has: tab.locator(".exercise-name", { hasText: new RegExp(`^${escapeRegex(name)}$`) }) });
+
 // History page: the card for one date, e.g. "2 Nov"
 const card = (tab, date) => tab.locator("#workout-list .workout")
   .filter({ has: tab.locator(".workout-date strong", { hasText: new RegExp(`^${date}$`) }) });
@@ -277,15 +286,17 @@ test("3. register a new account", async () => {
   await waitForReady(page);
 });
 
-test("4. a new account is asked to add exercises first", async () => {
+test("4. a new account is shown how to start", async () => {
   assert.deepEqual(await page.$eval("#workout-exercise", (select) => [...select.options].map((o) => o.text)), ["No exercises yet"]);
-  assert.match(await page.locator("#notice").innerText(), /Exercises page/);
+  assert.equal(await page.locator("#empty-start").isVisible(), true, "the No exercises yet box");
+  assert.equal(await page.getByRole("button", { name: "Add the common exercises" }).isVisible(), true);
+  assert.equal(await page.locator("#plan-today").isVisible(), false, "no plan chosen yet");
   assert.match((await page.locator("#today-list").innerText()), /Nothing logged yet/);
   assert.equal(await page.locator("#today-edit").isVisible(), false);
 
   await fillSet(page, 0, 60, 5);
   const message = await noticeAfter(page, () => page.click(SAVE));
-  assert.equal(message.text, "Add an exercise on the Exercises page first.");
+  assert.equal(message.text, "Add an exercise first: press + New, or add the common exercises.");
 });
 
 test("5. exercises: add, refuse doubles, tidy spaces, delete", async () => {
@@ -318,10 +329,10 @@ test("5. exercises: add, refuse doubles, tidy spaces, delete", async () => {
   assert.equal(await row("Hip thrust").count(), 1);
 
   // Delete: Cancel keeps it, OK deletes it
-  await cancelling(() => row("Hip thrust").getByRole("button").click());
+  await cancelling(() => row("Hip thrust").getByRole("button", { name: "Delete" }).click());
   assert.equal(await row("Hip thrust").count(), 1);
   for (const name of ["Hip thrust", "Leg press"]) {
-    await row(name).getByRole("button").click();
+    await row(name).getByRole("button", { name: "Delete" }).click();
     await row(name).waitFor({ state: "detached" });
   }
   await page.reload();
@@ -551,7 +562,7 @@ test("16. History: removing every set deletes the workout; Delete asks first", a
 
 test("17. Personal bests", async () => {
   await open(page, "bests.html");
-  assert.equal(await page.locator("#subtitle").innerText(), "Your heaviest weight for each exercise, from 2 workouts");
+  assert.equal(await page.locator("#subtitle").innerText(), "Your best set for each exercise, from 2 workouts");
   const top = clean(await page.locator("#top-best").innerText());
   assert.match(top, /Deadlift on Mon 9 Nov/);
   assert.match(top, /110 ?kg/);
@@ -696,6 +707,10 @@ test("24. a second user sees none of the first user's data, and names are never 
       await card(page, "20 Nov").getByRole("button", { name: "Edit" }).click();
     }
     assert.ok((await page.locator("main").innerText()).includes(trick), `${file} shows the name as text`);
+    if (file === "exercises.html") {
+      await exerciseRow(page, trick).getByRole("button", { name: "Edit" }).click();
+      assert.equal(await page.inputValue(".edit-name-box"), trick, "the edit box has the name as text");
+    }
     assert.equal(await page.evaluate(() => window.hacked), undefined, `${file} did not run it`);
   }
 
@@ -710,6 +725,249 @@ test("24. a second user sees none of the first user's data, and names are never 
   assert.equal(await page.locator("#subtitle").innerText(), "2 workouts");
 });
 
-test("25. no JavaScript errors on any page", () => {
+// ---------- The MVP gaps ----------
+
+const workoutAdds = async (tab) => (await fakeData(tab)).calls.filter(([op, path]) => op === "add" && path.endsWith("/workouts")).length;
+
+test("25. Log page: + New adds an exercise without leaving the page, and suggests its kind", async () => {
+  await open(page, "log.html");
+  const workoutsBefore = await workoutAdds(page);
+  await page.click("#new-exercise-button");
+  assert.equal(await page.locator("#new-exercise").isVisible(), true);
+  await page.fill("#new-exercise-name", "Push-ups");
+  assert.equal(await page.inputValue("#new-exercise-kind"), "bodyweight", "the kind is suggested from the name");
+  const added = await noticeAfter(page, () => page.press("#new-exercise-name", "Enter"));
+  assert.equal(added.text, "Added Push-ups. Fill in your sets below.");
+  assert.equal(await page.inputValue("#workout-exercise"), "Push-ups", "and it is picked");
+  assert.equal(await page.locator("#new-exercise").isVisible(), false);
+  assert.equal(await workoutAdds(page), workoutsBefore, "Enter in the box did not save a workout");
+
+  // The same name again just picks it
+  await page.selectOption("#workout-exercise", "Squat");
+  await page.click("#new-exercise-button");
+  await page.fill("#new-exercise-name", "push-UPS");
+  assert.equal((await noticeAfter(page, () => page.click("#new-exercise-add"))).text, "Push-ups is already in your list, so it is picked.");
+  assert.equal(await page.inputValue("#workout-exercise"), "Push-ups");
+
+  // Cancel closes it
+  await page.click("#new-exercise-button");
+  await page.click("#new-exercise-cancel");
+  assert.equal(await page.locator("#new-exercise").isVisible(), false);
+});
+
+test("26. bodyweight and timed exercises", async () => {
+  // Push-ups (bodyweight): reps, and the weight is only for extra weight
+  await page.selectOption("#workout-exercise", "Push-ups");
+  assert.equal(await page.locator("#weight-head").innerText(), "Extra kg");
+  assert.equal(await page.locator("#amount-head").innerText(), "Reps");
+  assert.equal(await page.locator("#plates-head").innerText(), "");
+  assert.equal((await logSets(page, "Push-ups", [["", 15], ["", 12], ["", 10]])).text, "Saved: 3 sets of Push-ups. Pick another exercise to keep going.");
+  assert.match(clean(await page.locator("#today-list").innerText()), /Push-ups 15, 12, 10 reps at bodyweight/);
+  assert.equal(await todayTotal(page), "9 sets · 1,368 kg lifted", "bodyweight adds no kg");
+  assert.equal(await page.locator("#best-figure").innerText(), "15reps");
+  assert.match(await page.locator("#best-date").innerText(), /^Done on Fri 20 Nov\. Best set of each recent workout:/);
+  assert.equal((await logSets(page, "Push-ups", [["", 20]])).text, "Saved: 1 set of Push-ups. New personal best: 20 reps, up from 15 reps!");
+
+  // Plank (timed): seconds instead of reps
+  await page.click("#new-exercise-button");
+  await page.fill("#new-exercise-name", "Plank");
+  assert.equal(await page.inputValue("#new-exercise-kind"), "timed");
+  await noticeAfter(page, () => page.click("#new-exercise-add"));
+  assert.equal(await page.locator("#amount-head").innerText(), "Seconds");
+  await fillSet(page, 0, "", 45);
+  await page.click("#add-set");
+  await fillSet(page, 1, null, 45);
+  await page.click("#add-set");
+  await fillSet(page, 2, null, 45);
+  assert.equal(await page.locator("#set-summary").innerText(), "3 sets · 135 s");
+  assert.equal((await noticeAfter(page, () => page.click(SAVE))).text, "Saved: 3 sets of Plank. Pick another exercise to keep going.");
+  assert.match(clean(await page.locator("#today-list").innerText()), /Plank 3 × 45 s/);
+  assert.ok(await nothingSavedAfter(page, async () => {
+    await fillSet(page, 0, "", 4000);
+    await page.click(SAVE);
+  }), "over an hour is refused");
+  assert.equal((await logSets(page, "Plank", [["", 60]])).text, "Saved: 1 set of Plank. New personal best: 60 s, up from 45 s!");
+  const saved = Object.values((await fakeData(page)).docs).flatMap((d) => d.sets || []).filter((set) => set.exerciseName === "Plank");
+  assert.deepEqual(saved.at(-1), { exerciseName: "Plank", seconds: 60, weight: 0 }, "a timed set is saved with seconds");
+
+  // History shows them, and Edit can change the seconds
+  await open(page, "history.html");
+  assert.match(await lifts(page, "20 Nov"), /Push-ups 15, 12, 10, 20 reps at bodyweight/);
+  assert.match(await lifts(page, "20 Nov"), /Plank 45, 45, 45, 60 s/);
+  await card(page, "20 Nov").getByRole("button", { name: "Edit" }).click();
+  await page.getByLabel("Seconds for Plank set 4").fill("75");
+  assert.equal((await noticeAfter(page, () => page.getByRole("button", { name: "Save changes" }).click())).text, "Saved your changes to 20 Nov.");
+  assert.match(await lifts(page, "20 Nov"), /Plank 45, 45, 45, 75 s/);
+
+  // Bests and Exercises show reps and seconds, with no plates
+  await open(page, "bests.html");
+  assert.match(clean(await page.locator("#bests-body tr", { hasText: "Push-ups" }).innerText()), /^Push-ups 20 Nov 20reps$/);
+  assert.match(clean(await page.locator("#bests-body tr", { hasText: "Plank" }).innerText()), /^Plank 20 Nov 75s$/);
+  await open(page, "exercises.html");
+  assert.match(clean(await exerciseRow(page, "Push-ups").innerText()), /^Push-ups Bodyweight 1 20 reps 20 Nov/);
+  assert.match(clean(await exerciseRow(page, "Plank").innerText()), /^Plank Timed \(seconds\) 1 75 s 20 Nov/);
+});
+
+test("27. Use this plan saves it and adds its exercises", async () => {
+  await open(page, "plan.html");
+  assert.equal(await page.locator(".plan-saved").count(), 0, "no plan chosen yet");
+  await page.selectOption("#plan-goal", "Build muscle");
+  await page.selectOption("#plan-level", "Beginner");
+  await page.selectOption("#plan-days", "3");
+  await page.click("#plan-form button");
+  const message = await noticeAfter(page, () => page.getByRole("button", { name: "Use this plan" }).click());
+  assert.equal(message.text, "This is now your plan. 6 of its exercises were added to your list. The Log page shows what to do each day.");
+  await page.screenshot({ path: join(SCREENSHOTS, "plan-saved.png"), fullPage: true });
+  assert.match(await page.locator(".plan-saved").innerText(), /This is your plan/);
+  const settings = Object.entries((await fakeData(page)).docs).find(([path]) => path.endsWith("/settings/plan"));
+  assert.deepEqual(settings[1], { goal: "Build muscle", level: "Beginner", days: 3 });
+
+  // Next time, the page opens on your plan
+  await page.reload();
+  await waitForReady(page);
+  assert.deepEqual([await page.inputValue("#plan-goal"), await page.inputValue("#plan-level"), await page.inputValue("#plan-days")], ["Build muscle", "Beginner", "3"]);
+  assert.equal(await page.locator(".plan-saved").count(), 1);
+  await open(page, "exercises.html");
+  assert.match(clean(await exerciseRow(page, "Triceps dips").innerText()), /^Triceps dips Bodyweight/, "added with the right kind");
+});
+
+test("28. the Log page follows the plan", async () => {
+  await open(page, "log.html");
+  // Friday 20 Nov is Day 3 of this plan
+  assert.equal(await page.locator("#plan-title").innerText(), "Today: Day 3 · Pull");
+  assert.deepEqual((await page.locator("#plan-list li").allInnerTexts()).map(clean), ["Deadlift 3 × 8", "Barbell row 3 × 10", "Biceps curls 3 × 12"]);
+  assert.equal(await page.locator("#plan-week").innerText(), "This week: 1 of 3 workouts");
+
+  // Tapping Deadlift fills in 3 sets of 8, with last time's weight (110 kg on 9 Nov)
+  await page.locator("#plan-list").getByRole("button", { name: "Deadlift" }).click();
+  assert.equal(await page.inputValue("#workout-exercise"), "Deadlift");
+  assert.deepEqual(await page.locator("#sets-body .weight").evaluateAll((boxes) => boxes.map((b) => b.value)), ["110", "110", "110"]);
+  assert.deepEqual(await page.locator("#sets-body .reps").evaluateAll((boxes) => boxes.map((b) => b.value)), ["8", "8", "8"]);
+  assert.equal((await noticeAfter(page, () => page.click(SAVE))).text, "Saved: 3 sets of Deadlift. Pick another exercise to keep going.");
+  assert.equal(clean(await page.locator("#plan-list li").first().innerText()), "Deadlift 3 × 8 · done ✓");
+  await page.screenshot({ path: join(SCREENSHOTS, "log-plan.png"), fullPage: true });
+
+  // Barbell row was never done: no weight yet, and the cursor waits in it
+  await page.locator("#plan-list").getByRole("button", { name: "Barbell row" }).click();
+  assert.deepEqual(await page.locator("#sets-body .weight").evaluateAll((boxes) => boxes.map((b) => b.value)), ["", "", ""]);
+  assert.deepEqual(await page.locator("#sets-body .reps").evaluateAll((boxes) => boxes.map((b) => b.value)), ["10", "10", "10"]);
+  assert.ok(await page.locator("#sets-body .weight").first().evaluate((box) => box === document.activeElement));
+
+  // Sets you typed are not thrown away without asking
+  await fillSet(page, 0, 40, null);
+  await cancelling(() => page.locator("#plan-list").getByRole("button", { name: "Biceps curls" }).click());
+  assert.match(dialogs.at(-1), /^Start Biceps curls\? The sets you typed are not saved yet\./);
+  assert.equal(await page.inputValue("#workout-exercise"), "Barbell row");
+  assert.equal(await page.locator("#sets-body .weight").first().inputValue(), "40");
+
+  // Saturday is a rest day: it shows the next training day
+  await setDate(page, "2026-11-21");
+  assert.equal(await page.locator("#plan-title").innerText(), "Sat 21 Nov is a rest day");
+  assert.match(await page.locator("#plan-note").innerText(), /^Next: Mon 23 Nov, Day 1 · Push\./);
+  assert.deepEqual((await page.locator("#plan-list li").allInnerTexts()).map((t) => clean(t).split(" 3 ×")[0]), ["Bench press", "Shoulder press", "Triceps dips"]);
+  await setDate(page, TODAY);
+});
+
+test("29. Exercises: rename (also in past workouts) and change the kind", async () => {
+  await open(page, "exercises.html");
+  await exerciseRow(page, "Dumbbell curl").getByRole("button", { name: "Edit" }).click();
+  assert.equal(await page.inputValue(".edit-name-box"), "Dumbbell curl");
+
+  // A name you already have is refused
+  await page.fill(".edit-name-box", "squat");
+  assert.equal((await noticeAfter(page, () => page.getByRole("button", { name: "Save", exact: true }).click())).text, "squat is already in your list.");
+
+  await page.fill(".edit-name-box", "  Dumbbell   curls ");
+  const renamed = await noticeAfter(page, () => page.getByRole("button", { name: "Save", exact: true }).click());
+  assert.equal(renamed.text, "Renamed Dumbbell curl to Dumbbell curls, in your past workouts too.");
+  assert.match(clean(await exerciseRow(page, "Dumbbell curls").innerText()), /^Dumbbell curls 1 12 kg 20 Nov/, "its history came along");
+  assert.equal(await exerciseRow(page, "Dumbbell curl").count(), 0);
+  assert.equal((await workoutDocs(page, TODAY)).length, 1, "the day was saved as one document");
+
+  await open(page, "history.html");
+  assert.match(await lifts(page, "20 Nov"), /Dumbbell curls 1 × 10 at 12 kg/);
+  await open(page, "bests.html");
+  assert.ok((await page.locator("#bests-body .exercise strong").allInnerTexts()).includes("Dumbbell curls"));
+
+  // Change only the kind
+  await open(page, "exercises.html");
+  await exerciseRow(page, "Lunges").getByRole("button", { name: "Edit" }).click();
+  await page.screenshot({ path: join(SCREENSHOTS, "exercises-edit.png"), fullPage: true });
+  await page.selectOption(".edit-kind", "bodyweight");
+  assert.equal((await noticeAfter(page, () => page.getByRole("button", { name: "Save", exact: true }).click())).text, "Saved Lunges.");
+  assert.match(clean(await exerciseRow(page, "Lunges").innerText()), /^Lunges Bodyweight/);
+
+  // Cancel changes nothing
+  await exerciseRow(page, "Squat").getByRole("button", { name: "Edit" }).click();
+  assert.ok(await nothingSavedAfter(page, async () => {
+    await page.fill(".edit-name-box", "Back squat");
+    await page.getByRole("button", { name: "Cancel" }).click();
+  }));
+  assert.equal(await exerciseRow(page, "Squat").count(), 1);
+});
+
+test("30. phone size: the new parts fit too", async () => {
+  const phone = await newWindow({ size: { viewport: { width: 375, height: 812 } } });
+  await copyDataTo(phone);
+  const tooWide = () => phone.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  await open(phone, "log.html");
+  await phone.click("#new-exercise-button");
+  assert.ok(await phone.locator("#plan-today").isVisible());
+  assert.ok(await tooWide() <= 0, `Log page with the plan and + New is ${await tooWide()}px too wide`);
+  await phone.screenshot({ path: join(SCREENSHOTS, "phone-log-plan.png"), fullPage: true });
+
+  await open(phone, "exercises.html");
+  await exerciseRow(phone, "Plank").getByRole("button", { name: "Edit" }).click();
+  assert.ok(await tooWide() <= 0, `Exercises in Edit is ${await tooWide()}px too wide`);
+  await phone.screenshot({ path: join(SCREENSHOTS, "phone-exercises-edit.png"), fullPage: true });
+
+  await open(phone, "plan.html");
+  assert.ok(await tooWide() <= 0, `Plan page is ${await tooWide()}px too wide`);
+  await phone.context().close();
+});
+
+test("31. Stop using the plan", async () => {
+  await open(page, "plan.html");
+  await cancelling(() => page.getByRole("button", { name: "Stop using it" }).click());
+  assert.equal(await page.locator(".plan-saved").count(), 1, "Cancel keeps it");
+  assert.equal((await noticeAfter(page, () => page.getByRole("button", { name: "Stop using it" }).click())).text, "You are not following a plan now.");
+  assert.equal(await page.getByRole("button", { name: "Use this plan" }).count(), 1);
+  await open(page, "log.html");
+  assert.equal(await page.locator("#plan-today").isVisible(), false);
+});
+
+test("32. a new account adds the common exercises in one click", async () => {
+  await page.click("#logout-button");
+  await arriveAt(page, "index.html");
+  await page.click("#switch-button");
+  await page.fill("#email", "chris@example.com");
+  await page.fill("#password", "secret123");
+  await page.click("#submit-button");
+  await arriveAt(page, "log.html");
+  await waitForReady(page);
+
+  const added = await noticeAfter(page, () => page.getByRole("button", { name: "Add the common exercises" }).click());
+  assert.equal(added.text, "Added 10 common exercises. Pick one and log your first set.");
+  assert.equal(await page.locator("#empty-start").isVisible(), false);
+  assert.equal(await page.locator("#workout-exercise option").count(), 10);
+  await page.selectOption("#workout-exercise", "Pull-ups");
+  assert.equal(await page.locator("#weight-head").innerText(), "Extra kg", "Pull-ups is bodyweight");
+
+  // The Exercises page has the same button for a new account
+  await page.click("#logout-button");
+  await arriveAt(page, "index.html");
+  await page.click("#switch-button");
+  await page.fill("#email", "dana@example.com");
+  await page.fill("#password", "secret123");
+  await page.click("#submit-button");
+  await arriveAt(page, "log.html");
+  await open(page, "exercises.html");
+  await page.getByRole("button", { name: "add the 10 common ones" }).click();
+  await page.locator("#exercise-list tr").nth(9).waitFor();
+  assert.equal(await page.locator("#subtitle").innerText(), "10 exercises, from your most to least logged");
+  assert.match(clean(await exerciseRow(page, "Plank").innerText()), /^Plank Timed \(seconds\)/);
+});
+
+test("33. no JavaScript errors on any page", () => {
   assert.deepEqual(errors, []);
 });

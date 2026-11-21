@@ -25,8 +25,16 @@ export function collection(_db, path) {
   return { path: cleanPath(path, false) };
 }
 
-export function doc(_db, path) {
-  return { path: cleanPath(path, true) };
+// doc(db, "users/abc/settings/plan"), or doc(collectionRef) for a new document with a new ID
+export function doc(parent, path) {
+  if (path === undefined) {
+    const state = load();
+    const id = "doc" + String(state.nextId++).padStart(4, "0");
+    save(state);
+    return { path: `${parent.path}/${id}`, id };
+  }
+  const clean = cleanPath(path, true);
+  return { path: clean, id: clean.split("/").pop() };
 }
 
 // The same rule as firestore.rules, plus the "offline" switch
@@ -80,6 +88,24 @@ export async function getDocs(colRef) {
   return { docs };
 }
 
+export async function getDoc(docRef) {
+  await wait();
+  const state = load();
+  check(state, docRef.path);
+  const data = state.docs[docRef.path];
+  return { id: docRef.id, exists: () => data !== undefined, data: () => (data === undefined ? undefined : copy(data)) };
+}
+
+export async function setDoc(docRef, data) {
+  await wait();
+  const state = load();
+  check(state, docRef.path);
+  checkData(data);
+  state.docs[docRef.path] = copy(data);
+  state.calls.push(["set", docRef.path]);
+  save(state);
+}
+
 export async function deleteDoc(docRef) {
   await wait();
   const state = load();
@@ -93,6 +119,10 @@ export async function deleteDoc(docRef) {
 export function writeBatch() {
   const changes = [];
   return {
+    set(docRef, data) {
+      changes.push({ type: "set", path: docRef.path, data });
+      return this;
+    },
     update(docRef, data) {
       changes.push({ type: "update", path: docRef.path, data });
       return this;
@@ -107,13 +137,17 @@ export function writeBatch() {
       // Check every change first, so nothing is saved if one of them is not allowed
       changes.forEach((change) => {
         check(state, change.path);
-        if (change.type === "update") {
-          if (!state.docs[change.path]) throw fbError("not-found", `No document to update: ${change.path}`);
+        if (change.type === "update" && !state.docs[change.path]) {
+          throw fbError("not-found", `No document to update: ${change.path}`);
+        }
+        if (change.type !== "delete") {
           checkData(change.data);
         }
       });
       changes.forEach((change) => {
-        if (change.type === "update") {
+        if (change.type === "set") {
+          state.docs[change.path] = copy(change.data);
+        } else if (change.type === "update") {
           state.docs[change.path] = { ...state.docs[change.path], ...copy(change.data) };
         } else {
           delete state.docs[change.path];

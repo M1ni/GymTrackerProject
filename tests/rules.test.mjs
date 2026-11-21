@@ -52,6 +52,16 @@ test("you can change your own workout in one go (what Edit and Remove do)", asyn
   await assertSucceeds(batch.commit());
 });
 
+test("you can save, read and remove your own plan; nobody else can see it", async () => {
+  const plan = { goal: "Build muscle", level: "Beginner", days: 3 };
+  await assertSucceeds(setDoc(doc(andrew(), "users/andrew/settings/plan"), plan));
+  await assertSucceeds(getDoc(doc(andrew(), "users/andrew/settings/plan")));
+  await assertFails(getDoc(doc(bogdan(), "users/andrew/settings/plan")));
+  await assertFails(setDoc(doc(bogdan(), "users/andrew/settings/plan"), plan));
+  await assertFails(getDoc(doc(loggedOut(), "users/andrew/settings/plan")));
+  await assertSucceeds(deleteDoc(doc(andrew(), "users/andrew/settings/plan")));
+});
+
 test("another user cannot read, add, change or delete your data", async () => {
   await addWorkoutForAndrew("w1");
   const db = bogdan();

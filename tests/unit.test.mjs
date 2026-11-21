@@ -6,8 +6,9 @@ import assert from "node:assert/strict";
 import * as format from "../js/format.js";
 import * as plates from "../js/plates.js";
 import { TrainingPlan } from "../js/plans.js";
-import { WorkoutHistory } from "../js/history.js";
-import { Workout, WorkoutSet } from "../js/workout.js";
+import { WorkoutHistory, bestOf, bestField } from "../js/history.js";
+import { Workout, WorkoutSet, fromPlain } from "../js/workout.js";
+import { Exercise, kindOf, tidyName, COMMON_EXERCISES } from "../js/exercise.js";
 import { Database } from "../js/database.js";
 import { User, friendlyError } from "../js/user.js";
 
@@ -261,4 +262,162 @@ test("friendlyError turns Firebase codes into plain messages", () => {
   assert.equal(friendlyError({ code: "auth/invalid-credential" }), "Wrong email or password.");
   assert.equal(friendlyError({ code: "auth/missing-email" }), "Please enter your email address.");
   assert.equal(friendlyError({ code: "auth/something-new" }), "Something went wrong. Please try again.");
+});
+
+// ---------- Dates for the plan, bodyweight and timed exercises ----------
+
+test("weekday and addDays", () => {
+  assert.equal(format.weekday("2026-11-20"), "Fri");
+  assert.equal(format.weekday("2026-11-23"), "Mon");
+  assert.equal(format.addDays("2026-11-20", 3), "2026-11-23");
+  assert.equal(format.addDays("2026-12-30", 3), "2027-01-02");
+  assert.equal(format.addDays("2026-03-01", -1), "2026-02-28");
+  assert.equal(format.addDays("2026-03-28", 2), "2026-03-30"); // over the clock change
+});
+
+test("bodyweight and timed sets as text", () => {
+  assert.equal(format.weightText(57.5), "57.5 kg");
+  assert.equal(format.weightText(0), "bodyweight");
+  assert.equal(format.setText({ reps: 8, weight: 57.5, seconds: null }), "8 reps at 57.5 kg");
+  assert.equal(format.setText({ reps: 12, weight: 0, seconds: null }), "12 reps at bodyweight");
+  assert.equal(format.setText({ reps: null, weight: 0, seconds: 45 }), "45 s");
+  assert.equal(format.setText({ reps: null, weight: 10, seconds: 30 }), "30 s with 10 kg");
+  const sets = (...list) => list.map(([reps, weight, seconds = null]) => ({ reps, weight, seconds }));
+  assert.equal(format.describeSets(sets([12, 0], [12, 0], [12, 0])), "3 × 12 at bodyweight");
+  assert.equal(format.describeSets(sets([15, 0], [12, 0])), "15, 12 reps at bodyweight");
+  assert.equal(format.describeSets(sets([10, 0], [8, 10])), "10, 8 reps at bodyweight, 10 kg");
+  assert.equal(format.describeSets(sets([null, 0, 45], [null, 0, 45], [null, 0, 45])), "3 × 45 s");
+  assert.equal(format.describeSets(sets([null, 0, 45], [null, 0, 60])), "45, 60 s");
+  assert.equal(format.describeSets(sets([null, 10, 30], [null, 10, 30])), "2 × 30 s with 10 kg");
+  assert.equal(format.volume(sets([null, 0, 45], [10, 50])), "500", "timed sets add no kg");
+});
+
+test("bestOf: the heaviest weight, most reps or longest time, and the first day it was done", () => {
+  assert.deepEqual(bestOf([
+    { date: "2026-11-09", reps: 5, weight: 100 }, { date: "2026-11-02", reps: 3, weight: 100 }, { date: "2026-11-13", reps: 8, weight: 90 }
+  ]), { weight: 100, date: "2026-11-02" });
+  assert.deepEqual(bestOf([
+    { date: "2026-11-09", reps: 12, weight: 0 }, { date: "2026-11-13", reps: 15, weight: 0 }
+  ]), { reps: 15, date: "2026-11-13" });
+  assert.deepEqual(bestOf([
+    { date: "2026-11-09", reps: null, weight: 0, seconds: 60 }, { date: "2026-11-13", reps: null, weight: 0, seconds: 45 }
+  ]), { seconds: 60, date: "2026-11-09" });
+  assert.deepEqual([bestField({ weight: 1 }), bestField({ reps: 1 }), bestField({ seconds: 1 })], ["weight", "reps", "seconds"]);
+  assert.equal(format.bestText({ weight: 102.5 }), "102.5 kg");
+  assert.equal(format.bestText({ reps: 15 }), "15 reps");
+  assert.equal(format.bestFigure({ seconds: 60 }), "60<small>s</small>");
+});
+
+test("getPersonalBests: weights first, then the most reps, then the longest times", () => {
+  const history = new WorkoutHistory([]);
+  history.add(workout("2026-11-13", ["Squat", 5, 100], ["Pull-ups", 12, 0], ["Bench press", 5, 80]));
+  history.add(new Workout("p1", "2026-11-13", [new WorkoutSet("Plank", null, 0, 60)]));
+  history.add(workout("2026-11-11", ["Push-ups", 20, 0]));
+  assert.deepEqual(history.getPersonalBests().map((b) => [b.exerciseName, format.bestText(b)]), [
+    ["Squat", "100 kg"], ["Bench press", "80 kg"], ["Push-ups", "20 reps"], ["Pull-ups", "12 reps"], ["Plank", "60 s"]
+  ]);
+});
+
+test("a timed set is saved with seconds instead of reps, and read back", async () => {
+  const plank = new Workout(null, "2026-11-20", [new WorkoutSet("Plank", null, 0, 45)]);
+  await plank.save("u1");
+  assert.deepEqual(fakeState().docs[`users/u1/workouts/${plank.id}`].sets, [{ exerciseName: "Plank", seconds: 45, weight: 0 }]);
+  assert.deepEqual((await WorkoutHistory.load("u1")).onDate("2026-11-20").sets, [new WorkoutSet("Plank", null, 0, 45)]);
+  assert.deepEqual(fromPlain({ exerciseName: "Squat", reps: 5, weight: 100 }), new WorkoutSet("Squat", 5, 100));
+});
+
+// ---------- exercise.js ----------
+
+test("kindOf and tidyName", () => {
+  assert.equal(kindOf("Plank"), "timed");
+  assert.equal(kindOf("  pull-ups "), "bodyweight");
+  assert.equal(kindOf("Squat"), "weights");
+  assert.equal(tidyName("  Lat   pulldown "), "Lat pulldown");
+});
+
+test("exercises are saved with their kind; old ones without a kind count as weights", async () => {
+  await Exercise.add("u1", "Plank", "timed");
+  await Database.save("users/u1/exercises", { name: "Squat" }); // saved before kinds existed
+  assert.deepEqual((await Exercise.getAll("u1")).map((e) => [e.name, e.kind]), [["Plank", "timed"], ["Squat", "weights"]]);
+});
+
+test("addMissing adds only the exercises you do not have, in one go, with their kinds", async () => {
+  const have = [await Exercise.add("u1", "squat")];
+  const added = await Exercise.addMissing("u1", COMMON_EXERCISES, have);
+  assert.equal(added.length, COMMON_EXERCISES.length - 1, "squat was already there");
+  const saved = await Exercise.getAll("u1");
+  assert.equal(saved.length, COMMON_EXERCISES.length);
+  assert.equal(saved.find((e) => e.name === "Pull-ups").kind, "bodyweight");
+  assert.equal(saved.find((e) => e.name === "Plank").kind, "timed");
+  assert.deepEqual(await Exercise.addMissing("u1", ["Squat", "Plank"], saved), [], "nothing new to add");
+});
+
+test("update renames the exercise in every past workout, in one go", async () => {
+  const curl = await Exercise.add("u1", "Dumbbell curl");
+  await saveDoc("2026-11-13", 100, "Dumbbell curl", 12);
+  await saveDoc("2026-11-13", 200, "Squat", 100);
+  await saveDoc("2026-11-11", 50, "Dumbbell curl", 10);
+  await saveDoc("2026-11-09", 40, "Squat", 90);
+  const history = await WorkoutHistory.load("u1");
+  const callsBefore = fakeState().calls.length;
+
+  await curl.update("u1", "Dumbbell curls", "weights", history.workouts);
+  assert.equal(curl.name, "Dumbbell curls");
+  assert.deepEqual(history.setsFor("Dumbbell curls").map((s) => s.date), ["2026-11-13", "2026-11-11"], "the page's copy changed too");
+  const again = await WorkoutHistory.load("u1");
+  assert.deepEqual(again.setsFor("Dumbbell curls").map((s) => s.date), ["2026-11-13", "2026-11-11"]);
+  assert.deepEqual(again.setsFor("Dumbbell curl"), []);
+  assert.equal(again.onDate("2026-11-13").ids.length, 1, "13 Nov is one document now");
+  assert.deepEqual(again.onDate("2026-11-13").sets.map((s) => s.exerciseName), ["Dumbbell curls", "Squat"]);
+  const changes = fakeState().calls.slice(callsBefore).map(([op]) => op).sort();
+  assert.deepEqual(changes, ["delete", "update", "update", "update"], "the exercise, 13 Nov and 11 Nov; 9 Nov is not touched");
+  assert.equal((await Exercise.getAll("u1"))[0].name, "Dumbbell curls");
+});
+
+test("update saves nothing if the connection is lost; changing only the kind leaves workouts alone", async () => {
+  const curl = await Exercise.add("u1", "Curl");
+  await saveDoc("2026-11-13", 100, "Curl", 12);
+  const history = await WorkoutHistory.load("u1");
+  const before = JSON.stringify(fakeState().docs);
+  const offline = fakeState();
+  offline.offline = true;
+  localStorage.setItem("fakeFirebase", JSON.stringify(offline));
+  await assert.rejects(curl.update("u1", "Curls", "weights", history.workouts));
+  assert.equal(curl.name, "Curl");
+  assert.equal(JSON.stringify(fakeState().docs), before, "no document changed");
+
+  const online = fakeState();
+  online.offline = false;
+  localStorage.setItem("fakeFirebase", JSON.stringify(online));
+  const callsBefore = fakeState().calls.length;
+  await curl.update("u1", "Curl", "bodyweight", history.workouts);
+  assert.deepEqual(fakeState().calls.slice(callsBefore), [["update", `users/u1/exercises/${curl.id}`]]);
+});
+
+// ---------- plans.js: following a plan ----------
+
+test("dayOn and nextDay follow the plan's week", () => {
+  const plan = TrainingPlan.findPlan("Build muscle", "Beginner", "3"); // Mon, Wed, Fri
+  const friday = plan.dayOn("2026-11-20");
+  assert.deepEqual([friday.number, friday.title], [3, "Pull"]);
+  assert.equal(plan.dayOn("2026-11-21"), null, "Saturday is a rest day");
+  const next = plan.nextDay("2026-11-21");
+  assert.deepEqual([next.date, next.number, next.title], ["2026-11-23", 1, "Push"]);
+  const afterMonday = plan.nextDay("2026-11-23");
+  assert.deepEqual([afterMonday.date, afterMonday.title], ["2026-11-25", "Legs"]);
+});
+
+test("exerciseNames lists each exercise of a plan once", () => {
+  const names = TrainingPlan.findPlan("Get stronger", "Beginner", "3").exerciseNames(); // squats every day
+  assert.deepEqual(names, ["Squat", "Bench press", "Barbell row", "Shoulder press", "Deadlift"]);
+});
+
+test("a chosen plan is saved, loaded back and forgotten", async () => {
+  assert.equal(await TrainingPlan.load("u1"), null);
+  const plan = TrainingPlan.findPlan("Get stronger", "Intermediate", "4");
+  await plan.use("u1");
+  assert.deepEqual(fakeState().docs["users/u1/settings/plan"], { goal: "Get stronger", level: "Intermediate", days: 4 });
+  assert.equal(await TrainingPlan.load("u1"), plan);
+  await TrainingPlan.stop("u1");
+  assert.equal(await TrainingPlan.load("u1"), null);
 });
