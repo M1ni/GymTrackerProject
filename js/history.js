@@ -35,7 +35,8 @@ export class WorkoutHistory {
 
   // F5: the workouts that match every word typed, e.g. "squat", "13 nov", "friday" or "bench nov".
   search(text) {
-    const words = text.toLowerCase().split(" ").filter((w) => w !== "");
+    // Split on any space, so a non-breaking space (e.g. pasted text) also works
+    const words = text.toLowerCase().split(/\s+/).filter((w) => w !== "");
     return this.workouts.filter((workout) => {
       const haystack = searchText(workout).split(" ");
       // A number must match a whole word (so "11" finds 11 Nov, not the "11" inside 2026-11-02).

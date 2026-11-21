@@ -189,7 +189,8 @@ whenLoggedIn(async (user) => {
       showNotice("Start by adding the exercises you do on the Exercises page.");
     } else {
       exerciseSelect.innerHTML = exercises
-        .map((e) => `<option>${escapeHtml(e.name)}</option>`)
+        // value= keeps the name exactly as saved (without it the browser squashes double spaces)
+        .map((e) => `<option value="${escapeHtml(e.name)}">${escapeHtml(e.name)}</option>`)
         .join("");
     }
     updateSidePanels();

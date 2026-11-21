@@ -7,6 +7,7 @@ import { kg, shortDate, heaviest, escapeHtml } from "./format.js";
 
 const form = document.getElementById("exercise-form");
 const nameInput = document.getElementById("exercise-name");
+const addButton = form.querySelector('button[type="submit"]');
 const list = document.getElementById("exercise-list");
 const subtitle = document.getElementById("subtitle");
 
@@ -75,7 +76,9 @@ async function deleteExercise(exercise) {
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
   if (!uid) return; // preview mode: nothing to save
-  const name = nameInput.value.trim();
+  if (addButton.disabled) return; // still saving the last one (Enter pressed twice)
+  // Remove extra spaces, so "Lat  pulldown" is saved as "Lat pulldown"
+  const name = nameInput.value.trim().replace(/\s+/g, " ");
   if (!name) return;
 
   // Do not add the same exercise twice (ignoring capital letters)
@@ -84,6 +87,7 @@ form.addEventListener("submit", async (event) => {
     return;
   }
 
+  addButton.disabled = true;
   try {
     const exercise = await Exercise.add(uid, name);
     exercises.push(exercise);
@@ -92,6 +96,7 @@ form.addEventListener("submit", async (event) => {
   } catch (error) {
     showNotice("Could not add the exercise. Check your internet connection and try again.");
   }
+  addButton.disabled = false;
 });
 
 whenLoggedIn(async (user) => {

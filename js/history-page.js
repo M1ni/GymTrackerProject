@@ -22,7 +22,7 @@ function workoutHtml(workout, index) {
     <div class="workout-date"><strong>${shortDate(workout.date)}</strong><span>${dayName(workout.date)}</span></div>
     <ul class="workout-lifts">${lifts}</ul>
     <div class="workout-top">${drawBarbell(top)}<span class="num">Heaviest set <strong>${kg(top)} kg</strong></span></div>
-    <div class="workout-side"><span class="num">${workout.sets.length} sets</span><button class="text-button" data-index="${index}">Delete</button></div>
+    <div class="workout-side"><span class="num">${workout.sets.length} ${workout.sets.length === 1 ? "set" : "sets"}</span><button class="text-button" data-index="${index}">Delete</button></div>
   </article>`;
 }
 
@@ -93,7 +93,7 @@ searchBox.addEventListener("input", () => {
 
 // Preview mode: search the sample workouts already on the page
 function filterSample() {
-  const words = searchBox.value.toLowerCase().split(" ").filter((w) => w !== "");
+  const words = searchBox.value.toLowerCase().split(/\s+/).filter((w) => w !== "");
   let shown = 0;
   list.querySelectorAll(".week").forEach((week) => {
     let shownInWeek = 0;
