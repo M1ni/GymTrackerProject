@@ -15,18 +15,27 @@ export class Workout {
     this.id = id;
     this.date = date;
     this.sets = sets;
+    // Every "Save workout" saves one document, so one gym session with 3 exercises
+    // is 3 documents. ids lists all of them (see WorkoutHistory.load).
+    this.ids = id ? [id] : [];
   }
 
   // Saves the workout to Firebase and remembers its new ID.
   async save(uid) {
     this.id = await Database.save(`users/${uid}/workouts`, {
       date: this.date,
+      // So the exercises of one day are shown in the order they were done
+      savedAt: Date.now(),
       // Firebase stores plain objects, not class objects
       sets: this.sets.map((s) => ({ exerciseName: s.exerciseName, reps: s.reps, weight: s.weight }))
     });
+    this.ids = [this.id];
   }
 
+  // Deletes the whole workout (every document saved for it).
   async delete(uid) {
-    await Database.delete(`users/${uid}/workouts/${this.id}`);
+    for (const id of this.ids) {
+      await Database.delete(`users/${uid}/workouts/${id}`);
+    }
   }
 }

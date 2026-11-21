@@ -11,11 +11,22 @@ export class WorkoutHistory {
   // Loads all of this user's workouts from Firebase, newest first.
   static async load(uid) {
     const rows = await Database.getAll(`users/${uid}/workouts`);
-    const workouts = rows.map((row) => new Workout(
-      row.id,
-      row.date,
-      row.sets.map((s) => new WorkoutSet(s.exerciseName, s.reps, s.weight))
-    ));
+    // In the order they were saved (older saves have no savedAt, so they go first)
+    rows.sort((a, b) => (a.savedAt || 0) - (b.savedAt || 0));
+
+    // "Save workout" saves each exercise as its own document, so put the documents
+    // from the same day back together: one Workout per date (one gym session).
+    const workouts = [];
+    rows.forEach((row) => {
+      const sets = row.sets.map((s) => new WorkoutSet(s.exerciseName, s.reps, s.weight));
+      const sameDay = workouts.find((w) => w.date === row.date);
+      if (sameDay) {
+        sameDay.sets.push(...sets);
+        sameDay.ids.push(row.id);
+      } else {
+        workouts.push(new Workout(row.id, row.date, sets));
+      }
+    });
     workouts.sort((a, b) => b.date.localeCompare(a.date));
     return new WorkoutHistory(workouts);
   }
