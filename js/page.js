@@ -26,15 +26,25 @@ export function showNotice(message) {
   notice.hidden = false;
 }
 
+// Shows the page. Until then the CSS hides it (and says "Loading…"),
+// so the sample workouts in the HTML never show to a logged-in user.
+function showPage() {
+  document.querySelector(".app").classList.add("is-ready");
+}
+
 drawAllBarbells();
 
 if (isConfigured) {
   // Only logged-in users can see these pages (FR3).
-  User.watch((user) => {
+  User.watch(async (user) => {
     if (user) {
       emailText.textContent = user.email;
-      if (whenReady) {
-        whenReady(user);
+      try {
+        if (whenReady) {
+          await whenReady(user); // wait until the page has loaded the user's data
+        }
+      } finally {
+        showPage();
       }
     } else {
       window.location.href = "index.html";
@@ -50,6 +60,7 @@ if (isConfigured) {
 } else {
   showNotice("Preview mode: Firebase is not set up yet, so you are seeing sample workouts and nothing is saved.");
   emailText.textContent = "Preview mode";
+  showPage();
   logoutButtons.forEach((button) => {
     button.addEventListener("click", () => {
       window.location.href = "index.html";

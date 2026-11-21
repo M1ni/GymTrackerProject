@@ -179,9 +179,23 @@ a {
 }
 
 .content {
+  position: relative;
   width: 100%;
   max-width: 1240px;
   padding: 36px 40px 64px;
+}
+
+/* The HTML has sample workouts in it (for preview mode). Keep them hidden until page.js
+   knows who is logged in and has loaded their real data, so nobody sees made-up workouts. */
+.app:not(.is-ready) .content > *,
+.app:not(.is-ready) .account > * {
+  visibility: hidden;
+}
+
+.app:not(.is-ready) .content::before {
+  content: "Loading…";
+  position: absolute;
+  color: var(--muted);
 }
 
 .title-row {
@@ -508,7 +522,9 @@ tbody tr {
 
 .plate {
   position: relative;
-  flex: none;
+  /* Plates get thinner when there are too many to fit on the sleeve (very heavy weights) */
+  flex: 0 1 auto;
+  min-width: 2px;
   margin: 0 1px;
   border-radius: 2px;
 }
@@ -1123,6 +1139,8 @@ tbody tr {
   }
 
   .top-best .barbell {
+    /* Only as wide as the drawing, so the bigger size does not stick out of the screen */
+    justify-self: start;
     transform: scale(1.3);
     transform-origin: left center;
   }
