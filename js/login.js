@@ -12,12 +12,21 @@ const switchText = document.getElementById("switch-text");
 const switchButton = document.getElementById("switch-button");
 const errorBox = document.getElementById("error");
 const notice = document.getElementById("notice");
+const forgot = document.getElementById("forgot");
+const forgotButton = document.getElementById("forgot-button");
 
 let registering = false; // false = log in form, true = register form
 
 function showError(message) {
   errorBox.textContent = message;
   errorBox.hidden = false;
+}
+
+// A message at the top of the box, in green when it is good news.
+function showMessage(message, kind) {
+  notice.textContent = message;
+  notice.className = kind ? `notice ${kind}` : "notice";
+  notice.hidden = false;
 }
 
 // Switch between the log in form and the register form.
@@ -29,7 +38,32 @@ switchButton.addEventListener("click", () => {
   switchText.textContent = registering ? "Already have an account?" : "No account yet?";
   switchButton.textContent = registering ? "Log in" : "Register";
   passwordInput.autocomplete = registering ? "new-password" : "current-password";
+  forgot.hidden = registering;
   errorBox.hidden = true;
+});
+
+// Forgot password: send an email with a link to choose a new password.
+forgotButton.addEventListener("click", async () => {
+  errorBox.hidden = true;
+  const email = emailInput.value.trim();
+  if (!email) {
+    showError("Type your email above first, then press Forgot password again.");
+    emailInput.focus();
+    return;
+  }
+  if (!isConfigured) {
+    showMessage("Preview mode: Firebase is not set up yet, so no email was sent.");
+    return;
+  }
+
+  forgotButton.disabled = true;
+  try {
+    await User.resetPassword(email);
+    showMessage(`If there is an account for ${email}, we have sent it an email with a link to choose a new password. Check your spam folder if it does not arrive.`, "good");
+  } catch (error) {
+    showError(friendlyError(error));
+  }
+  forgotButton.disabled = false;
 });
 
 form.addEventListener("submit", async (event) => {

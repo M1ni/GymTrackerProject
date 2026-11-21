@@ -21,8 +21,10 @@ export function whenLoggedIn(callback) {
 }
 
 // Shows a message at the top of the page, e.g. when saving fails.
-export function showNotice(message) {
+// With kind "good" it is green, for good news such as "Saved".
+export function showNotice(message, kind) {
   notice.textContent = message;
+  notice.className = kind ? `notice ${kind}` : "notice";
   notice.hidden = false;
 }
 

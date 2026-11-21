@@ -18,6 +18,8 @@
   --warning-ink: #92400e;
   --error-bg: #ffedea;
   --error-ink: #831c1e;
+  --good-bg: #edf7ee;
+  --good-ink: #1d5c2e;
 
   /* Plate colours (competition colours) */
   --plate-25: #c4242a;
@@ -388,6 +390,12 @@ button.wide {
 .text-button:hover {
   color: var(--text);
   background: none;
+}
+
+.text-button:disabled {
+  color: var(--muted);
+  background: none;
+  opacity: 0.6;
 }
 
 .row-end {
@@ -807,6 +815,13 @@ tbody tr {
   font-weight: 500;
 }
 
+/* Good news, e.g. "Saved" or a new personal best */
+.notice.good {
+  color: var(--good-ink);
+  background: var(--good-bg);
+  border-color: #cfe6d2;
+}
+
 .error {
   padding: 10px 12px;
   font-size: 14px;
@@ -907,6 +922,15 @@ tbody tr {
   height: 46px;
   margin-top: 4px;
   font-size: 15px;
+}
+
+.forgot {
+  margin-top: -8px;
+  text-align: right;
+}
+
+.forgot .text-button {
+  font-size: 13px;
 }
 
 .switch {

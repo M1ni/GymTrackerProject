@@ -4,7 +4,8 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   signOut,
-  onAuthStateChanged
+  onAuthStateChanged,
+  sendPasswordResetEmail
 } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-auth.js";
 import { auth } from "./firebase.js";
 
@@ -31,6 +32,13 @@ export class User {
     await signOut(auth);
   }
 
+  // Forgot password: Firebase emails a link where you choose a new password.
+  // Firebase does not say if the email has an account, so nobody can use this
+  // to find out who uses GymTrack.
+  static async resetPassword(email) {
+    await sendPasswordResetEmail(auth, email);
+  }
+
   // Calls whenChecked with the logged-in User, or null if nobody is logged in.
   static watch(whenChecked) {
     onAuthStateChanged(auth, (firebaseUser) => {
@@ -53,6 +61,8 @@ export function friendlyError(error) {
     "auth/weak-password": "The password must be at least 6 characters.",
     "auth/invalid-email": "Please enter a valid email address.",
     "auth/missing-password": "Please enter your password.",
+    "auth/missing-email": "Please enter your email address.",
+    "auth/user-disabled": "This account has been turned off. Please contact us.",
     "auth/too-many-requests": "Too many attempts. Please wait a minute and try again.",
     "auth/network-request-failed": "No internet connection. Please try again."
   };
