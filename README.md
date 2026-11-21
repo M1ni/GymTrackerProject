@@ -16,7 +16,13 @@ A simple gym workout tracker website, built for the ITC 2205 team project at Der
 6. See personal bests
 7. Get a personalised training plan (ready-made plans chosen by goal, level and days per week)
 
-Also: forgot password, fixing a workout afterwards (change a weight or reps, or remove a set), a "Today so far" list while you log, a message when you beat your personal best, and the total weight lifted for each workout and week.
+Also:
+
+- Getting started: a new account can add the common exercises in one click, and **+ New** adds an exercise without leaving the Log page
+- Following a plan: **Use this plan** saves it, and the Log page then shows each day's exercises; tap one to fill in its sets with last time's weight
+- Bodyweight exercises (like pull-ups) and timed ones (like a plank, in seconds), with bests in reps or seconds
+- Renaming an exercise, which also renames it in your past workouts
+- Forgot password, fixing a workout afterwards (change a weight or reps, or remove a set), a "Today so far" list while you log, a message when you beat your personal best, and the total weight lifted for each workout and week
 
 ## Files
 
@@ -32,7 +38,7 @@ Also: forgot password, fixing a workout afterwards (change a weight or reps, or 
 - `js/exercise.js`, `js/workout.js`, `js/history.js`: the `Exercise`, `Workout`, `WorkoutSet` and `WorkoutHistory` classes from the class diagram
 - `js/exercises-page.js`, `js/log.js`, `js/history-page.js`: code for the Exercises (F2), Log workout (F3) and History with search (F4, F5) pages
 - `js/bests-page.js`: the Personal bests page (F6)
-- `js/plans.js`, `js/plan-page.js`: the `TrainingPlan` class with the 8 ready-made plans, and the Training plan page (F7)
+- `js/plans.js`, `js/plan-page.js`: the `TrainingPlan` class with the 8 ready-made plans (and saving the one you choose), and the Training plan page (F7)
 - `js/format.js`: turns saved data into text, such as "3 × 8 at 57.5 kg"
 - `js/plates.js`: draws a weight as the plates on a 20 kg bar
 - `firestore.rules`: the database rules, also pasted into the Firebase console

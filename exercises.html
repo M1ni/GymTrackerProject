@@ -46,11 +46,16 @@
         <section class="card">
           <form id="exercise-form" class="add-row">
             <input type="text" id="exercise-name" placeholder="Add an exercise, e.g. Lunges" aria-label="Exercise name" required>
+            <select id="exercise-kind" aria-label="Kind of exercise">
+              <option value="weights">With weights</option>
+              <option value="bodyweight">Bodyweight</option>
+              <option value="timed">Timed (seconds)</option>
+            </select>
             <button type="submit">Add exercise</button>
           </form>
           <table>
             <thead>
-              <tr><th>Exercise</th><th class="right">Workouts</th><th class="right">Best</th><th class="right">Last done</th><th class="right"><span class="visually-hidden">Delete</span></th></tr>
+              <tr><th>Exercise</th><th class="right">Workouts</th><th class="right">Best</th><th class="right">Last done</th><th class="right"><span class="visually-hidden">Change or delete</span></th></tr>
             </thead>
             <tbody id="exercise-list">
                 <tr>
@@ -58,35 +63,35 @@
                   <td class="right">3</td>
                   <td class="right best-cell"><span data-barbell="85"></span><span class="num">85 kg</span></td>
                   <td class="right">13 Nov</td>
-                  <td class="right"><button class="text-button">Delete</button></td>
+                  <td class="right"><span class="row-actions"><button class="text-button">Edit</button><button class="text-button">Delete</button></span></td>
                 </tr>
                 <tr>
                   <td>Bench press</td>
                   <td class="right">3</td>
                   <td class="right best-cell"><span data-barbell="60"></span><span class="num">60 kg</span></td>
                   <td class="right">13 Nov</td>
-                  <td class="right"><button class="text-button">Delete</button></td>
+                  <td class="right"><span class="row-actions"><button class="text-button">Edit</button><button class="text-button">Delete</button></span></td>
                 </tr>
                 <tr>
                   <td>Shoulder press</td>
                   <td class="right">2</td>
                   <td class="right best-cell"><span data-barbell="35"></span><span class="num">35 kg</span></td>
                   <td class="right">13 Nov</td>
-                  <td class="right"><button class="text-button">Delete</button></td>
+                  <td class="right"><span class="row-actions"><button class="text-button">Edit</button><button class="text-button">Delete</button></span></td>
                 </tr>
                 <tr>
                   <td>Deadlift</td>
                   <td class="right">2</td>
                   <td class="right best-cell"><span data-barbell="100"></span><span class="num">100 kg</span></td>
                   <td class="right">11 Nov</td>
-                  <td class="right"><button class="text-button">Delete</button></td>
+                  <td class="right"><span class="row-actions"><button class="text-button">Edit</button><button class="text-button">Delete</button></span></td>
                 </tr>
                 <tr>
                   <td>Barbell row</td>
                   <td class="right">1</td>
                   <td class="right best-cell"><span data-barbell="40"></span><span class="num">40 kg</span></td>
                   <td class="right">11 Nov</td>
-                  <td class="right"><button class="text-button">Delete</button></td>
+                  <td class="right"><span class="row-actions"><button class="text-button">Edit</button><button class="text-button">Delete</button></span></td>
                 </tr>
             </tbody>
           </table>

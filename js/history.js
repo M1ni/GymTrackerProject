@@ -1,7 +1,29 @@
 // The WorkoutHistory class from our class diagram (F4).
 import { Database } from "./database.js";
 import { searchText } from "./format.js";
-import { Workout, WorkoutSet } from "./workout.js";
+import { Workout, fromPlain } from "./workout.js";
+
+// The best set of an exercise. sets can be in any order, each with its date.
+// Usually it is the heaviest weight. For exercises done without weights it is the
+// most reps, and for timed ones (like a plank) the longest time.
+// Returns e.g. { weight: 110, date: "2026-11-09" }, with the first date it was done.
+export function bestOf(sets) {
+  let field = "weight";
+  if (sets.some((s) => s.seconds != null)) {
+    field = "seconds";
+  } else if (sets.every((s) => !s.weight)) {
+    field = "reps";
+  }
+  const counted = sets.filter((s) => s[field] != null);
+  const top = Math.max(...counted.map((s) => s[field]));
+  const date = counted.filter((s) => s[field] === top).map((s) => s.date).sort()[0];
+  return { [field]: top, date };
+}
+
+// What a best is measured in: "weight", "reps" or "seconds"
+export function bestField(best) {
+  return ["seconds", "reps", "weight"].find((field) => best[field] != null);
+}
 
 export class WorkoutHistory {
   constructor(workouts) {
@@ -15,8 +37,7 @@ export class WorkoutHistory {
     rows.sort((a, b) => (a.savedAt || 0) - (b.savedAt || 0));
     const history = new WorkoutHistory([]);
     rows.forEach((row) => {
-      const sets = row.sets.map((s) => new WorkoutSet(s.exerciseName, s.reps, s.weight));
-      history.add(new Workout(row.id, row.date, sets));
+      history.add(new Workout(row.id, row.date, row.sets.map(fromPlain)));
     });
     return history;
   }
@@ -51,7 +72,7 @@ export class WorkoutHistory {
     this.workouts.forEach((workout) => {
       workout.sets.forEach((set) => {
         if (set.exerciseName === exerciseName) {
-          result.push({ date: workout.date, reps: set.reps, weight: set.weight });
+          result.push({ date: workout.date, reps: set.reps, weight: set.weight, seconds: set.seconds });
         }
       });
     });
@@ -72,22 +93,26 @@ export class WorkoutHistory {
     });
   }
 
-  // F6: the heaviest weight for each exercise, heaviest first,
-  // with the date it was first lifted.
+  // F6: the best set for each exercise (see bestOf), with the date it was first done.
+  // Heaviest weights first, then the most reps, then the longest times.
   getPersonalBests() {
-    const bests = [];
-    // Go from oldest to newest, so a later equal weight does not replace the first date
-    [...this.workouts].reverse().forEach((workout) => {
+    const byExercise = new Map();
+    this.workouts.forEach((workout) => {
       workout.sets.forEach((set) => {
-        const best = bests.find((b) => b.exerciseName === set.exerciseName);
-        if (!best) {
-          bests.push({ exerciseName: set.exerciseName, weight: set.weight, date: workout.date });
-        } else if (set.weight > best.weight) {
-          best.weight = set.weight;
-          best.date = workout.date;
+        if (!byExercise.has(set.exerciseName)) {
+          byExercise.set(set.exerciseName, []);
         }
+        byExercise.get(set.exerciseName).push({ ...set, date: workout.date });
       });
     });
-    return bests.sort((a, b) => b.weight - a.weight || a.exerciseName.localeCompare(b.exerciseName));
+    const bests = [...byExercise].map(([exerciseName, sets]) => ({ exerciseName, ...bestOf(sets) }));
+    const order = ["weight", "reps", "seconds"];
+    return bests.sort((a, b) => {
+      const fieldA = bestField(a);
+      const fieldB = bestField(b);
+      return order.indexOf(fieldA) - order.indexOf(fieldB) ||
+        b[fieldB] - a[fieldA] ||
+        a.exerciseName.localeCompare(b.exerciseName);
+    });
   }
 }

@@ -25,10 +25,13 @@ function workoutHtml(workout, index) {
     .map((g) => `<li>${escapeHtml(g.name)} <span>${describeSets(g.sets)}</span></li>`)
     .join("");
   const top = heaviest(workout.sets);
+  const topHtml = top
+    ? `${drawBarbell(top)}<span class="num">Heaviest set <strong>${kg(top)} kg</strong></span>`
+    : '<span class="num">No weights</span>';
   return `<article class="workout">
     <div class="workout-date"><strong>${shortDate(workout.date)}</strong><span>${dayName(workout.date)}</span></div>
     <ul class="workout-lifts">${lifts}</ul>
-    <div class="workout-top">${drawBarbell(top)}<span class="num">Heaviest set <strong>${kg(top)} kg</strong></span></div>
+    <div class="workout-top">${topHtml}</div>
     <div class="workout-side">
       <span class="num">${plural(workout.sets.length, "set")}<br>${volume(workout.sets)} kg total</span>
       <span class="workout-actions">
@@ -39,14 +42,20 @@ function workoutHtml(workout, index) {
   </article>`;
 }
 
-// The HTML for a workout being changed: every set gets its own weight and reps box.
+// The HTML for a workout being changed: every set gets its own weight and reps box
+// (or seconds, for timed exercises like a plank).
 function editHtml(workout, index) {
+  const anyTimed = workout.sets.some((s) => s.seconds !== null);
   const rows = groupByExercise(workout.sets).map((group) => group.sets.map((set, i) => {
     const label = `${escapeHtml(group.name)} set ${i + 1}`;
+    const timed = set.seconds !== null;
+    const amountBox = timed
+      ? `<input type="number" class="amount seconds" min="1" max="3600" value="${set.seconds}" required aria-label="Seconds for ${label}">`
+      : `<input type="number" class="amount reps" min="1" max="100" value="${set.reps}" required aria-label="Reps for ${label}">`;
     return `<tr data-set="${workout.sets.indexOf(set)}">
       <td class="edit-name">${i === 0 ? `<strong>${escapeHtml(group.name)}</strong>` : ""}<span>Set ${i + 1}</span></td>
       <td><input type="number" class="weight" min="0" max="${MAX_WEIGHT}" step="any" value="${set.weight}" required aria-label="Weight in kg for ${label}"></td>
-      <td><input type="number" class="reps" min="1" max="100" value="${set.reps}" required aria-label="Reps for ${label}"></td>
+      <td>${amountBox}</td>
       <td class="right"><button type="button" class="text-button" data-remove-set data-label="${label}" aria-label="Remove ${label}">Remove</button></td>
     </tr>`;
   }).join("")).join("");
@@ -55,7 +64,7 @@ function editHtml(workout, index) {
     <div class="workout-date"><strong>${shortDate(workout.date)}</strong><span>${dayName(workout.date)}</span></div>
     <form class="edit-form" data-index="${index}">
       <table class="sets edit-sets">
-        <thead><tr><th>Exercise</th><th>Weight (kg)</th><th>Reps</th><th><span class="visually-hidden">Remove</span></th></tr></thead>
+        <thead><tr><th>Exercise</th><th>Weight (kg)</th><th>${anyTimed ? "Reps or seconds" : "Reps"}</th><th><span class="visually-hidden">Remove</span></th></tr></thead>
         <tbody>${rows}</tbody>
       </table>
       <div class="edit-foot">
@@ -166,11 +175,14 @@ function setUpEditForm(editForm, workout) {
   // The browser checks the boxes first (weight 0 to 500, reps 1 to 100), like on the Log page
   editForm.addEventListener("submit", async (event) => {
     event.preventDefault();
-    const sets = [...editForm.querySelectorAll("tbody tr:not(.removed)")].map((row) => new WorkoutSet(
-      workout.sets[Number(row.dataset.set)].exerciseName,
-      Number(row.querySelector(".reps").value),
-      Number(row.querySelector(".weight").value)
-    ));
+    const sets = [...editForm.querySelectorAll("tbody tr:not(.removed)")].map((row) => {
+      const original = workout.sets[Number(row.dataset.set)];
+      const weight = Number(row.querySelector(".weight").value);
+      const amount = Number(row.querySelector(".amount").value);
+      return original.seconds !== null
+        ? new WorkoutSet(original.exerciseName, null, weight, amount)
+        : new WorkoutSet(original.exerciseName, amount, weight);
+    });
 
     // Every set removed: that is the same as deleting the workout
     if (sets.length === 0) {

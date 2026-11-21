@@ -1,6 +1,8 @@
 // The TrainingPlan class from our class diagram (F7).
-// The plans are written here in the code, not saved in Firebase.
+// The plans are written here in the code. Firebase only saves which one you chose.
 // 8 plans: 2 goals x 2 levels x 3 or 4 days a week.
+import { Database } from "./database.js";
+import { weekday, addDays } from "./format.js";
 
 export class TrainingPlan {
   constructor(name, goal, level, daysPerWeek, tip, schedule) {
@@ -18,6 +20,45 @@ export class TrainingPlan {
     return PLANS.find((plan) =>
       plan.goal === goal && plan.level === level && plan.daysPerWeek === Number(days)
     );
+  }
+
+  // The plan this user chose with "Use this plan", or null if they have not chosen one.
+  static async load(uid) {
+    const saved = await Database.get(`users/${uid}/settings/plan`);
+    return saved ? TrainingPlan.findPlan(saved.goal, saved.level, saved.days) || null : null;
+  }
+
+  // Remembers this plan for the user. The Log page then shows each day's exercises.
+  async use(uid) {
+    await Database.set(`users/${uid}/settings/plan`, { goal: this.goal, level: this.level, days: this.daysPerWeek });
+  }
+
+  // Forgets the user's plan.
+  static async stop(uid) {
+    await Database.delete(`users/${uid}/settings/plan`);
+  }
+
+  // The training day on a date ("YYYY-MM-DD"), e.g. { number: 2, day: "Wed", title: "Legs", exercises },
+  // or null if it is a rest day.
+  dayOn(date) {
+    const index = this.schedule.findIndex((d) => d.day === weekday(date));
+    return index === -1 ? null : { number: index + 1, date, ...this.schedule[index] };
+  }
+
+  // The first training day after a date (for rest days: "Next: Wed, Day 2")
+  nextDay(date) {
+    for (let i = 1; i <= 7; i++) {
+      const day = this.dayOn(addDays(date, i));
+      if (day) {
+        return day;
+      }
+    }
+    return null;
+  }
+
+  // Every exercise in the plan, once each
+  exerciseNames() {
+    return [...new Set(this.schedule.flatMap((d) => d.exercises.map(([name]) => name)))];
   }
 }
 

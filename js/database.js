@@ -4,6 +4,8 @@ import {
   collection,
   addDoc,
   getDocs,
+  getDoc,
+  setDoc,
   deleteDoc,
   doc,
   writeBatch
@@ -17,10 +19,33 @@ export class Database {
     return result.id;
   }
 
+  // Saves several new documents in a collection in one go. Returns their new IDs.
+  static async saveMany(path, list) {
+    const batch = writeBatch(db);
+    const refs = list.map((data) => {
+      const ref = doc(collection(db, path)); // a new document, with a new ID
+      batch.set(ref, data);
+      return ref;
+    });
+    await batch.commit();
+    return refs.map((ref) => ref.id);
+  }
+
   // Returns every document in a collection, each with its ID added.
   static async getAll(path) {
     const snapshot = await getDocs(collection(db, path));
     return snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+  }
+
+  // Returns one document, e.g. "users/abc/settings/plan", or null if it does not exist.
+  static async get(path) {
+    const snapshot = await getDoc(doc(db, path));
+    return snapshot.exists() ? snapshot.data() : null;
+  }
+
+  // Saves one document at a fixed place, e.g. "users/abc/settings/plan".
+  static async set(path, data) {
+    await setDoc(doc(db, path), data);
   }
 
   // Deletes one document, e.g. "users/abc/exercises/xyz".
@@ -28,13 +53,13 @@ export class Database {
     await deleteDoc(doc(db, path));
   }
 
-  // Changes some fields of one document and deletes other documents, all in one go:
-  // either every change is saved or none is, so a lost connection halfway
-  // cannot leave a workout half changed.
-  static async replace(path, data, pathsToDelete) {
+  // Changes and deletes several documents in one go: either every change is saved
+  // or none is, so a lost connection halfway cannot leave things half changed.
+  // updates is a list of [path, data]. (Firestore allows up to 500 changes at once.)
+  static async saveAll(updates, deletes = []) {
     const batch = writeBatch(db);
-    batch.update(doc(db, path), data);
-    pathsToDelete.forEach((p) => batch.delete(doc(db, p)));
+    updates.forEach(([path, data]) => batch.update(doc(db, path), data));
+    deletes.forEach((path) => batch.delete(doc(db, path)));
     await batch.commit();
   }
 }

@@ -44,10 +44,36 @@
 
         <!-- Sample data so the design can be seen. Replaced by the real data in weeks 4 and 5. -->
         <div class="split">
-          <div class="stack">
+          <div class="stack log-main">
+            <section class="card" id="plan-today">
+              <div class="card-head">
+                <h2 id="plan-title">Today: Day 1 · Push</h2>
+                <a href="plan.html">Your plan</a>
+              </div>
+              <p id="plan-note" class="muted plan-note">Tap an exercise to fill in its sets.</p>
+              <ul id="plan-list" class="mini-list plan-list">
+                <li class="done"><button type="button" class="text-button">Bench press</button><span>3 × 10 · done ✓</span></li>
+                <li><button type="button" class="text-button">Shoulder press</button><span>3 × 10</span></li>
+                <li><button type="button" class="text-button">Triceps dips</button><span>3 × 12</span></li>
+              </ul>
+              <p id="plan-week" class="muted plan-week">This week: 1 of 3 workouts</p>
+            </section>
+
             <form id="workout-form" class="card">
+              <div id="empty-start" class="empty-start" hidden>
+                <p><strong>No exercises yet.</strong> Add the common ones in one click, or choose a training plan and its exercises are added for you.</p>
+                <div class="empty-start-actions">
+                  <button type="button" id="add-common">Add the common exercises</button>
+                  <a href="plan.html">Choose a plan</a>
+                </div>
+              </div>
+
               <div class="fields">
-                <label>Exercise
+                <div class="field">
+                  <div class="field-head">
+                    <label for="workout-exercise">Exercise</label>
+                    <button type="button" id="new-exercise-button" class="text-button">+ New</button>
+                  </div>
                   <select id="workout-exercise">
                     <option>Bench press</option>
                     <option>Squat</option>
@@ -55,15 +81,26 @@
                     <option>Shoulder press</option>
                     <option>Barbell row</option>
                   </select>
-                </label>
+                </div>
                 <label>Date
                   <input type="date" id="workout-date" required>
                 </label>
               </div>
 
+              <div id="new-exercise" class="new-exercise" hidden>
+                <input type="text" id="new-exercise-name" placeholder="New exercise, e.g. Lunges" aria-label="Name of the new exercise">
+                <select id="new-exercise-kind" aria-label="Kind of exercise">
+                  <option value="weights">With weights</option>
+                  <option value="bodyweight">Bodyweight</option>
+                  <option value="timed">Timed (seconds)</option>
+                </select>
+                <button type="button" id="new-exercise-add">Add</button>
+                <button type="button" id="new-exercise-cancel" class="secondary">Cancel</button>
+              </div>
+
               <table class="sets">
                 <thead>
-                  <tr><th>Set</th><th>Weight (kg)</th><th>Reps</th><th>Plates</th></tr>
+                  <tr><th>Set</th><th id="weight-head">Weight (kg)</th><th id="amount-head">Reps</th><th id="plates-head">Plates</th></tr>
                 </thead>
                 <tbody id="sets-body">
                   <tr>
@@ -97,7 +134,7 @@
             </section>
           </div>
 
-          <div class="stack">
+          <div class="stack" id="side-panels">
             <section class="card">
               <div class="card-head">
                 <h2>Last time</h2>

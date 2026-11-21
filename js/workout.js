@@ -2,16 +2,31 @@
 import { Database } from "./database.js";
 
 export class WorkoutSet {
-  constructor(exerciseName, reps, weight) {
+  // A timed exercise (like a plank) has seconds instead of reps: reps is null.
+  // weight 0 means bodyweight.
+  constructor(exerciseName, reps, weight, seconds = null) {
     this.exerciseName = exerciseName;
     this.reps = reps;
     this.weight = weight;
+    this.seconds = seconds;
+  }
+
+  // The same set under a new exercise name (see Exercise.update)
+  renamed(name) {
+    return new WorkoutSet(name, this.reps, this.weight, this.seconds);
   }
 }
 
-// Firebase stores plain objects, not class objects
+// Firebase stores plain objects, not class objects. A timed set saves seconds instead of reps.
 function toPlain(sets) {
-  return sets.map((s) => ({ exerciseName: s.exerciseName, reps: s.reps, weight: s.weight }));
+  return sets.map((s) => (s.seconds !== null
+    ? { exerciseName: s.exerciseName, seconds: s.seconds, weight: s.weight }
+    : { exerciseName: s.exerciseName, reps: s.reps, weight: s.weight }));
+}
+
+// And back from Firebase to a WorkoutSet
+export function fromPlain(s) {
+  return new WorkoutSet(s.exerciseName, s.reps ?? null, s.weight ?? 0, s.seconds ?? null);
 }
 
 export class Workout {
@@ -36,25 +51,33 @@ export class Workout {
     this.ids = [this.id];
   }
 
-  // Saves a changed list of sets, e.g. after fixing a wrong weight or removing a set.
-  // All of the day's sets go into its first document and the other documents
-  // are deleted, in one go (see Database.replace).
-  async saveChanges(uid, sets) {
+  // The database changes that save a new list of sets for this day: all of the day's sets
+  // go into its first document, and its other documents are deleted.
+  changesFor(uid, sets) {
     const [first, ...others] = this.ids;
-    await Database.replace(
-      `users/${uid}/workouts/${first}`,
-      { sets: toPlain(sets) },
-      others.map((id) => `users/${uid}/workouts/${id}`)
-    );
-    this.id = first;
-    this.ids = [first];
+    return {
+      updates: [[`users/${uid}/workouts/${first}`, { sets: toPlain(sets) }]],
+      deletes: others.map((id) => `users/${uid}/workouts/${id}`)
+    };
+  }
+
+  // Call this once those changes are saved.
+  changed(sets) {
+    this.id = this.ids[0];
+    this.ids = [this.id];
     this.sets = sets;
   }
 
-  // Deletes the whole workout (every document saved for it).
+  // Saves a changed list of sets, e.g. after fixing a wrong weight or removing a set.
+  // Everything is saved in one go (see Database.saveAll).
+  async saveChanges(uid, sets) {
+    const { updates, deletes } = this.changesFor(uid, sets);
+    await Database.saveAll(updates, deletes);
+    this.changed(sets);
+  }
+
+  // Deletes the whole workout (every document saved for it), in one go.
   async delete(uid) {
-    for (const id of this.ids) {
-      await Database.delete(`users/${uid}/workouts/${id}`);
-    }
+    await Database.saveAll([], this.ids.map((id) => `users/${uid}/workouts/${id}`));
   }
 }
