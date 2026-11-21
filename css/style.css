@@ -1373,6 +1373,21 @@ tbody tr {
   .best .barbell-cell {
     display: none;
   }
+
+  /* Edit above Delete, so the exercises table fits small phones */
+  .row-actions {
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 8px;
+  }
+}
+
+/* The smallest phones (320px wide): a little less space between table columns */
+@media (max-width: 340px) {
+  th,
+  td {
+    padding-right: 8px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

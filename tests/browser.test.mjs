@@ -906,7 +906,7 @@ test("29. Exercises: rename (also in past workouts) and change the kind", async 
   assert.equal(await exerciseRow(page, "Squat").count(), 1);
 });
 
-test("30. phone size: the new parts fit too", async () => {
+test("30. phone size: the new parts fit too, also on small phones", async () => {
   const phone = await newWindow({ size: { viewport: { width: 375, height: 812 } } });
   await copyDataTo(phone);
   const tooWide = () => phone.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
@@ -923,6 +923,15 @@ test("30. phone size: the new parts fit too", async () => {
 
   await open(phone, "plan.html");
   assert.ok(await tooWide() <= 0, `Plan page is ${await tooWide()}px too wide`);
+
+  // Smaller phones too (360px is common on Android, 320px is the smallest)
+  for (const width of [360, 320]) {
+    await phone.setViewportSize({ width, height: 740 });
+    for (const file of ["log.html", "history.html", "exercises.html", "bests.html", "plan.html"]) {
+      await open(phone, file);
+      assert.ok(await tooWide() <= 0, `${file} is ${await tooWide()}px too wide at ${width}px`);
+    }
+  }
   await phone.context().close();
 });
 
