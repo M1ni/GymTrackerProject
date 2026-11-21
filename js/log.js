@@ -5,7 +5,7 @@ import { Exercise } from "./exercise.js";
 import { Workout, WorkoutSet } from "./workout.js";
 import { WorkoutHistory } from "./history.js";
 import { drawBarbell, platesText, MAX_WEIGHT } from "./plates.js";
-import { kg, dayDate, heaviest, escapeHtml } from "./format.js";
+import { kg, dayDate, heaviest, volume, describeSets, groupByExercise, escapeHtml } from "./format.js";
 
 const form = document.getElementById("workout-form");
 const exerciseSelect = document.getElementById("workout-exercise");
@@ -14,6 +14,10 @@ const setsBody = document.getElementById("sets-body");
 const addSetButton = document.getElementById("add-set");
 const summary = document.getElementById("set-summary");
 const saveButton = form.querySelector('button[type="submit"]');
+const todayTitle = document.getElementById("today-title");
+const todayList = document.getElementById("today-list");
+const todayTotal = document.getElementById("today-total");
+const todayEdit = document.getElementById("today-edit");
 
 let uid = null;
 let history = new WorkoutHistory([]);
@@ -125,6 +129,63 @@ exerciseSelect.addEventListener("change", () => {
   if (uid) updateSidePanels();
 });
 
+// ---------- Today so far ----------
+
+// Shows everything logged on the chosen date, so you can see the whole session.
+function updateToday() {
+  const date = dateInput.value;
+  const workout = date ? history.onDate(date) : undefined;
+  todayTitle.textContent = !date || date === today() ? "Today so far" : `Workout on ${dayDate(date)}`;
+  todayEdit.hidden = !workout;
+  if (!workout) {
+    todayList.innerHTML = '<li class="muted">Nothing logged yet. Each exercise you save shows here.</li>';
+    todayTotal.textContent = "";
+    return;
+  }
+
+  // The Edit link opens this workout in History, ready to fix a set
+  todayEdit.href = `history.html#edit-${date}`;
+  const groups = groupByExercise(workout.sets);
+  todayList.innerHTML = groups
+    .map((g, i) => `<li>
+        <span>${escapeHtml(g.name)}</span>
+        <span>${describeSets(g.sets)} <button type="button" class="text-button" data-remove="${i}">Remove</button></span>
+      </li>`)
+    .join("");
+  const count = workout.sets.length;
+  todayTotal.textContent = `${count} ${count === 1 ? "set" : "sets"} · ${volume(workout.sets)} kg lifted`;
+
+  todayList.querySelectorAll("button[data-remove]").forEach((button) => {
+    const name = groups[Number(button.dataset.remove)].name;
+    button.addEventListener("click", () => removeExercise(workout, name));
+  });
+}
+
+// Takes one exercise out of the workout, e.g. when it was saved by mistake.
+async function removeExercise(workout, name) {
+  if (!confirm(`Remove ${name} from this workout? This cannot be undone.`)) {
+    return;
+  }
+  const left = workout.sets.filter((s) => s.exerciseName !== name);
+  try {
+    if (left.length === 0) {
+      await workout.delete(uid);
+      history.remove(workout);
+    } else {
+      await workout.saveChanges(uid, left);
+    }
+    showNotice(`Removed ${name} from the workout.`);
+    updateToday();
+    updateSidePanels();
+  } catch (error) {
+    showNotice("Could not remove it. Check your internet connection and try again.");
+  }
+}
+
+dateInput.addEventListener("change", () => {
+  if (uid) updateToday();
+});
+
 // ---------- Saving ----------
 
 form.addEventListener("submit", async (event) => {
@@ -148,12 +209,13 @@ form.addEventListener("submit", async (event) => {
   }
 
   // Only rows with both a weight and reps are saved
+  const name = exerciseSelect.value;
   const sets = [];
   setsBody.querySelectorAll("tr").forEach((row) => {
     const weight = Number(row.querySelector(".weight").value);
     const reps = Number(row.querySelector(".reps").value);
     if (weight >= 0 && reps > 0 && row.querySelector(".weight").value !== "") {
-      sets.push(new WorkoutSet(exerciseSelect.value, reps, weight));
+      sets.push(new WorkoutSet(name, reps, weight));
     }
   });
   if (sets.length === 0) {
@@ -161,15 +223,27 @@ form.addEventListener("submit", async (event) => {
     return;
   }
 
+  // The best before this workout, to see if it is a new personal best
+  const before = history.setsFor(name);
+  const oldBest = heaviest(before);
+
   saveButton.disabled = true;
   try {
     const workout = new Workout(null, dateInput.value, sets);
     await workout.save(uid);
-    history.workouts.unshift(workout);
-    history.workouts.sort((a, b) => b.date.localeCompare(a.date));
-    showNotice(`Saved: ${sets.length} ${sets.length === 1 ? "set" : "sets"} of ${exerciseSelect.value}. Pick another exercise to keep going.`);
+    history.add(workout);
+
+    let message = `Saved: ${sets.length} ${sets.length === 1 ? "set" : "sets"} of ${name}.`;
+    const newBest = heaviest(sets);
+    if (before.length > 0 && newBest > oldBest) {
+      message += ` New personal best: ${kg(newBest)} kg, up from ${kg(oldBest)} kg!`;
+    } else {
+      message += " Pick another exercise to keep going.";
+    }
+    showNotice(message, "good");
     resetSets();
     updateSidePanels();
+    updateToday();
   } catch (error) {
     showNotice("Could not save the workout. Check your internet connection and try again.");
   }
@@ -194,6 +268,7 @@ whenLoggedIn(async (user) => {
         .join("");
     }
     updateSidePanels();
+    updateToday();
   } catch (error) {
     showNotice("Could not load your exercises. Refresh the page to try again.");
   }

@@ -575,6 +575,18 @@ tbody tr {
   padding-top: 16px;
 }
 
+/* "Today so far" on the Log workout page */
+#today-list .text-button {
+  margin-left: 8px;
+  font-size: 13px;
+}
+
+.today-total {
+  margin-top: auto;
+  padding-top: 12px;
+  font-size: 13px;
+}
+
 .side-figure {
   display: flex;
   align-items: center;
@@ -611,13 +623,23 @@ tbody tr {
   margin-top: var(--gap);
 }
 
-.week h2 {
+.week-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 12px;
   margin-bottom: 4px;
+}
+
+.week-head span {
+  font-size: 13px;
+  color: var(--muted);
 }
 
 .workout {
   display: grid;
-  grid-template-columns: 120px 1fr 220px 90px;
+  grid-template-columns: 120px 1fr 220px 110px;
   gap: 16px;
   padding: 16px 0;
   border-top: 1px solid var(--rule);
@@ -683,8 +705,50 @@ tbody tr {
   flex-direction: column;
   align-items: flex-end;
   justify-content: space-between;
+  gap: 8px;
   font-size: 13px;
   color: var(--muted);
+  text-align: right;
+}
+
+.workout-actions {
+  display: flex;
+  gap: 14px;
+}
+
+/* Changing a workout in History */
+.workout.editing {
+  grid-template-columns: 120px minmax(0, 1fr);
+}
+
+.edit-sets td {
+  height: 56px;
+}
+
+.edit-name strong {
+  display: block;
+  font-weight: 500;
+}
+
+.edit-name span {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+/* A set marked to be removed: faded until you save (or press Undo) */
+.edit-sets tr.removed td:not(:last-child) {
+  opacity: 0.4;
+}
+
+.edit-sets tr.removed input {
+  text-decoration: line-through;
+}
+
+.edit-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding-top: 16px;
 }
 
 /* Exercises */
@@ -983,7 +1047,7 @@ tbody tr {
 
 @media (max-width: 960px) {
   .workout {
-    grid-template-columns: 110px 1fr 90px;
+    grid-template-columns: 110px 1fr 110px;
   }
 
   .workout-top {
@@ -1140,6 +1204,18 @@ tbody tr {
     grid-row: 3;
     flex-direction: row;
     justify-content: space-between;
+  }
+
+  .workout.editing {
+    grid-template-columns: 1fr;
+  }
+
+  .edit-sets input {
+    width: 100%;
+  }
+
+  .edit-foot button {
+    flex: 1;
   }
 
   .best-cell .barbell {

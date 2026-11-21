@@ -44,44 +44,58 @@
 
         <!-- Sample data so the design can be seen. Replaced by the real data in weeks 4 and 5. -->
         <div class="split">
-          <form id="workout-form" class="card">
-            <div class="fields">
-              <label>Exercise
-                <select id="workout-exercise">
-                  <option>Bench press</option>
-                  <option>Squat</option>
-                  <option>Deadlift</option>
-                  <option>Shoulder press</option>
-                  <option>Barbell row</option>
-                </select>
-              </label>
-              <label>Date
-                <input type="date" id="workout-date" required>
-              </label>
-            </div>
-
-            <table class="sets">
-              <thead>
-                <tr><th>Set</th><th>Weight (kg)</th><th>Reps</th><th>Plates</th></tr>
-              </thead>
-              <tbody id="sets-body">
-                <tr>
-                  <td class="set-number">1</td>
-                  <td><input type="number" class="weight" min="0" max="500" step="any" aria-label="Weight in kg for set 1"></td>
-                  <td><input type="number" class="reps" min="1" max="100" aria-label="Reps for set 1"></td>
-                  <td class="plates-cell"><div class="plates"></div><span class="plates-text"></span></td>
-                </tr>
-              </tbody>
-            </table>
-
-            <div class="form-foot">
-              <button type="button" id="add-set" class="secondary">+ Add set</button>
-              <div class="row-end">
-                <span id="set-summary" class="muted num" aria-live="polite"></span>
-                <button type="submit">Save workout</button>
+          <div class="stack">
+            <form id="workout-form" class="card">
+              <div class="fields">
+                <label>Exercise
+                  <select id="workout-exercise">
+                    <option>Bench press</option>
+                    <option>Squat</option>
+                    <option>Deadlift</option>
+                    <option>Shoulder press</option>
+                    <option>Barbell row</option>
+                  </select>
+                </label>
+                <label>Date
+                  <input type="date" id="workout-date" required>
+                </label>
               </div>
-            </div>
-          </form>
+
+              <table class="sets">
+                <thead>
+                  <tr><th>Set</th><th>Weight (kg)</th><th>Reps</th><th>Plates</th></tr>
+                </thead>
+                <tbody id="sets-body">
+                  <tr>
+                    <td class="set-number">1</td>
+                    <td><input type="number" class="weight" min="0" max="500" step="any" aria-label="Weight in kg for set 1"></td>
+                    <td><input type="number" class="reps" min="1" max="100" aria-label="Reps for set 1"></td>
+                    <td class="plates-cell"><div class="plates"></div><span class="plates-text"></span></td>
+                  </tr>
+                </tbody>
+              </table>
+
+              <div class="form-foot">
+                <button type="button" id="add-set" class="secondary">+ Add set</button>
+                <div class="row-end">
+                  <span id="set-summary" class="muted num" aria-live="polite"></span>
+                  <button type="submit">Save workout</button>
+                </div>
+              </div>
+            </form>
+
+            <section class="card" id="today-card">
+              <div class="card-head">
+                <h2 id="today-title">Today so far</h2>
+                <a id="today-edit" href="history.html">Edit</a>
+              </div>
+              <ul id="today-list" class="mini-list">
+                <li><span>Bench press</span><span>3 × 8 at 57.5 kg</span></li>
+                <li><span>Shoulder press</span><span>3 × 8 at 35 kg</span></li>
+              </ul>
+              <p id="today-total" class="today-total muted num">6 sets · 2,220 kg lifted</p>
+            </section>
+          </div>
 
           <div class="stack">
             <section class="card">
