@@ -1,2 +1,7 @@
 .DS_Store
 .taste-skill/
+
+# Test tools and results (see the tests folder)
+node_modules/
+tests/screenshots/
+*-debug.log

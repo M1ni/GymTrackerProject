@@ -1,0 +1,46 @@
+# Runs all of our tests on GitHub every time someone pushes or opens a pull request.
+# The results are in the Actions tab of the repository.
+name: Tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: tests
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: tests/package-lock.json
+
+      # The Firestore emulator (for the rules tests) needs Java
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+
+      - name: Unit tests
+        run: npm run test:unit
+      - name: Browser tests
+        run: npm run test:browser
+      - name: Database rules tests
+        run: npm run test:rules
+
+      # If something failed, keep the screenshots so we can see what the page looked like
+      - name: Save screenshots
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: screenshots
+          path: tests/screenshots/

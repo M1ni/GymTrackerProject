@@ -16,6 +16,8 @@ A simple gym workout tracker website, built for the ITC 2205 team project at Der
 6. See personal bests
 7. Get a personalised training plan (ready-made plans chosen by goal, level and days per week)
 
+Also: forgot password, fixing a workout afterwards (change a weight or reps, or remove a set), a "Today so far" list while you log, a message when you beat your personal best, and the total weight lifted for each workout and week.
+
 ## Files
 
 - `index.html`: log in and register (F1)
@@ -34,7 +36,27 @@ A simple gym workout tracker website, built for the ITC 2205 team project at Der
 - `js/format.js`: turns saved data into text, such as "3 × 8 at 57.5 kg"
 - `js/plates.js`: draws a weight as the plates on a 20 kg bar
 - `firestore.rules`: the database rules, also pasted into the Firebase console
+- `firebase.json`: Firebase settings, used by the tests (and by `firebase deploy` if we ever use it)
+- `tests/`: the automated tests (see Testing below)
+- `.github/workflows/tests.yml`: runs the tests on GitHub after every push
 
 ## Running it on your computer
 
 The pages use JavaScript modules, so open them through a local server instead of double-clicking the file. In VS Code, the Live Server extension works. Until `js/firebase-config.js` has the real values, the site runs in preview mode: you can see every page, but nothing is saved.
+
+## Testing
+
+The `tests` folder has three sets of automated tests. GitHub runs them after every push (see the Actions tab). To run them on your computer you need Node.js 22, and Java 21 for the rules tests:
+
+```bash
+cd tests
+npm install
+npx playwright install chromium
+npm test
+```
+
+- `unit.test.mjs`: the code that does not need a browser, such as dates, plates, search, personal bests, and saving and changing workouts.
+- `browser.test.mjs`: opens the site in Chromium and uses every page like a person would, on a computer and a phone-sized screen. Firebase is swapped for a stand-in (`tests/fake-firebase/`), so it never touches our real accounts or data. Screenshots are saved in `tests/screenshots/`.
+- `rules.test.mjs`: checks `firestore.rules` in the Firebase emulator, so you can only see and change your own data.
+
+You can also run one set at a time: `npm run test:unit`, `npm run test:browser` or `npm run test:rules`.

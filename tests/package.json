@@ -1,0 +1,17 @@
+{
+  "name": "gymtrack-tests",
+  "private": true,
+  "description": "Automated tests for GymTrack. The website itself does not need any of this.",
+  "scripts": {
+    "test": "npm run test:unit && npm run test:browser && npm run test:rules",
+    "test:unit": "node --import ./loader.mjs --test unit.test.mjs",
+    "test:browser": "node --test --test-concurrency=1 browser.test.mjs",
+    "test:rules": "firebase emulators:exec --config ../firebase.json --only firestore --project demo-gymtrack \"node --test rules.test.mjs\""
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "5.0.2",
+    "firebase": "13.1.0",
+    "firebase-tools": "15.37.0",
+    "playwright": "1.63.0"
+  }
+}
