@@ -25,6 +25,13 @@ let saves = 0; // changes saved since this page opened
 let onNewData = () => {};
 let onNoConnection = () => {};
 
+// Requests to Firebase wait until the page has checked who is logged in (see loggedIn).
+// That lets a page show the copy straight away, without waiting for the login check.
+let openGate;
+let loginChecked = new Promise((resolve) => {
+  openGate = resolve;
+});
+
 // The copy of a collection (a list of documents) or of one document.
 // undefined means there is no copy yet; null means the document does not exist.
 function readCopy(path) {
@@ -110,11 +117,13 @@ function changeCopy(path, change) {
 }
 
 async function fetchAll(path) {
+  await loginChecked;
   const snapshot = await getDocs(collection(db, path));
   return snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
 }
 
 async function fetchOne(path) {
+  await loginChecked;
   const snapshot = await getDoc(doc(db, path));
   return snapshot.exists() ? snapshot.data() : null;
 }
@@ -122,6 +131,7 @@ async function fetchOne(path) {
 export class Database {
   // Saves a new document in a collection, e.g. "users/abc/exercises". Returns its new ID.
   static async save(path, data) {
+    await loginChecked;
     const result = await addDoc(collection(db, path), data);
     changeCopy(`${path}/${result.id}`, { set: data });
     return result.id;
@@ -129,6 +139,7 @@ export class Database {
 
   // Saves several new documents in a collection in one go. Returns their new IDs.
   static async saveMany(path, list) {
+    await loginChecked;
     const batch = writeBatch(db);
     const refs = list.map((data) => {
       const ref = doc(collection(db, path)); // a new document, with a new ID
@@ -170,12 +181,14 @@ export class Database {
 
   // Saves one document at a fixed place, e.g. "users/abc/settings/plan".
   static async set(path, data) {
+    await loginChecked;
     await setDoc(doc(db, path), data);
     changeCopy(path, { set: data });
   }
 
   // Deletes one document, e.g. "users/abc/exercises/xyz".
   static async delete(path) {
+    await loginChecked;
     await deleteDoc(doc(db, path));
     changeCopy(path, { remove: true });
   }
@@ -184,12 +197,27 @@ export class Database {
   // or none is, so a lost connection halfway cannot leave things half changed.
   // updates is a list of [path, data]. (Firestore allows up to 500 changes at once.)
   static async saveAll(updates, deletes = []) {
+    await loginChecked;
     const batch = writeBatch(db);
     updates.forEach(([path, data]) => batch.update(doc(db, path), data));
     deletes.forEach((path) => batch.delete(doc(db, path)));
     await batch.commit();
     updates.forEach(([path, data]) => changeCopy(path, { update: data }));
     deletes.forEach((path) => changeCopy(path, { remove: true }));
+  }
+
+  // Called once Firebase has confirmed who is logged in: requests can go out now.
+  static loggedIn() {
+    openGate();
+  }
+
+  // Who the copy in this browser belongs to ({ uid, email }), or null if there is no copy.
+  static copyOwner() {
+    return readCopy("owner") ?? null;
+  }
+
+  static setCopyOwner(user) {
+    saveCopy("owner", { uid: user.uid, email: user.email });
   }
 
   // Runs callback when the background check finds newer data than the copy that was shown.
@@ -227,5 +255,6 @@ export class Database {
     saves = 0;
     onNewData = () => {};
     onNoConnection = () => {};
+    loginChecked = Promise.resolve();
   }
 }

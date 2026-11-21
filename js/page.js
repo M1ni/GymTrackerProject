@@ -39,32 +39,58 @@ function showPage() {
 
 drawAllBarbells();
 
-if (isConfigured) {
-  // Only logged-in users can see these pages (FR3).
-  User.watch(async (user) => {
-    if (user) {
-      emailText.textContent = user.email;
+// Loads the page's data (from the copy in this browser if there is one) and shows the page.
+let started = null;
+function startPage(user) {
+  if (started) return started;
+  emailText.textContent = user.email;
 
-      // Newer data than the copy shown (e.g. saved on your phone): show the page again with it
-      let showAgain = null;
-      Database.whenNewData(() => {
-        clearTimeout(showAgain);
-        showAgain = setTimeout(() => whenReady && whenReady(user, true), 50);
-      });
-      Database.whenNoConnection(() => {
-        showNotice("No connection right now, so this shows your data from your last visit. New changes may not save.");
-      });
+  // Newer data than the copy shown (e.g. saved on your phone): show the page again with it
+  let showAgain = null;
+  Database.whenNewData(() => {
+    clearTimeout(showAgain);
+    showAgain = setTimeout(() => whenReady && whenReady(user, true), 50);
+  });
+  Database.whenNoConnection(() => {
+    showNotice("No connection right now, so this shows your data from your last visit. New changes may not save.");
+  });
 
-      try {
-        if (whenReady) {
-          await whenReady(user, false); // wait until the page has the user's data
-        }
-      } finally {
-        showPage();
+  started = (async () => {
+    try {
+      if (whenReady) {
+        await whenReady(user, false); // wait until the page has the user's data
       }
-    } else {
-      window.location.href = "index.html";
+    } finally {
+      showPage();
     }
+  })();
+  return started;
+}
+
+if (isConfigured) {
+  // If this browser has a copy of someone's data, show the page from it straight away,
+  // while Firebase checks the login (requests to Firebase wait for that check).
+  const owner = Database.copyOwner();
+  if (owner) {
+    // After this page's own script has run (it imports this file first) and set its loader
+    setTimeout(() => startPage(owner), 0);
+  }
+
+  // Only logged-in users can see these pages (FR3).
+  User.watch((user) => {
+    if (!user) {
+      window.location.href = "index.html";
+      return;
+    }
+    if (owner && owner.uid !== user.uid) {
+      // Someone else is logged in now: forget the old copy and start again
+      Database.forgetCopy();
+      window.location.reload();
+      return;
+    }
+    Database.setCopyOwner(user);
+    Database.loggedIn();
+    startPage(user);
   });
 
   logoutButtons.forEach((button) => {
