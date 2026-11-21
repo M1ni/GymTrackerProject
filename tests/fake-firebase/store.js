@@ -15,7 +15,8 @@ export function load() {
     nextId: 1,
     calls: [],        // every database change, e.g. ["add", "users/uid/workouts"]
     resetEmails: [],  // emails asked for a password reset
-    offline: false    // true makes every database call fail, like a lost connection
+    offline: false,   // true makes every database call fail, like a lost connection
+    delay: 20         // ms each database call takes (bigger = a slow connection)
   };
 }
 

@@ -3,7 +3,8 @@
 // It is a little stricter than the real one: it also refuses NaN, which is always a bug here.
 import { load, save, fbError } from "./store.js";
 
-const wait = () => new Promise((resolve) => setTimeout(resolve, 20));
+// How long each call takes: 20 ms, or state.delay to act like a slow connection
+const wait = () => new Promise((resolve) => setTimeout(resolve, load().delay ?? 20));
 const copy = (data) => JSON.parse(JSON.stringify(data));
 
 export function getFirestore(app) {

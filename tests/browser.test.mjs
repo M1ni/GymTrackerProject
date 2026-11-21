@@ -599,37 +599,54 @@ test("19. Training plan: every choice shows the right plan", async () => {
   }
 });
 
-test("20. friendly messages when the connection is lost", async () => {
-  await setOffline(page, true);
-  for (const [file, where, message] of [
-    ["history.html", "#workout-list", /Could not load your workouts/],
-    ["bests.html", "#top-best", /Could not load your personal bests/],
-    ["exercises.html", "#exercise-list", /Could not load your exercises/],
-    ["log.html", "#notice", /Could not load your exercises/]
-  ]) {
-    await open(page, file);
-    assert.match(await page.locator(where).innerText(), message, file);
+test("20. with no connection: your saved copy, or friendly messages", async () => {
+  try {
+    // Pages you have opened before show your data from the copy, and say there is no connection
+    await setOffline(page, true);
+    for (const [file, where, data] of [
+      ["history.html", "#workout-list", /20 Nov/],
+      ["bests.html", "#top-best", /Deadlift/],
+      ["exercises.html", "#exercise-list", /Squat/],
+      ["log.html", "#today-list", /Squat/]
+    ]) {
+      await open(page, file);
+      assert.match(await page.locator(where).innerText(), data, `${file} shows the copy`);
+      await page.waitForFunction(() => !document.getElementById("notice").hidden);
+      assert.match(await page.locator("#notice").innerText(), /^No connection right now, so this shows your data from your last visit/, file);
+    }
+
+    // Without a copy, each page says it could not load
+    await page.evaluate(() => Object.keys(localStorage).filter((k) => k.startsWith("gymtrack-copy:")).forEach((k) => localStorage.removeItem(k)));
+    for (const [file, where, message] of [
+      ["history.html", "#workout-list", /Could not load your workouts/],
+      ["bests.html", "#top-best", /Could not load your personal bests/],
+      ["exercises.html", "#exercise-list", /Could not load your exercises/],
+      ["log.html", "#notice", /Could not load your exercises/]
+    ]) {
+      await open(page, file);
+      assert.match(await page.locator(where).innerText(), message, file);
+    }
+    await setOffline(page, false);
+
+    // Saving with no connection fails straight away, with a message (and nothing is lost on screen)
+    await open(page, "history.html");
+    await card(page, "20 Nov").getByRole("button", { name: "Edit" }).click();
+    await setOffline(page, true);
+    const failed = await noticeAfter(page, () => page.getByRole("button", { name: "Save changes" }).click());
+    assert.equal(failed.text, "Could not save your changes. Check your internet connection and try again.");
+    assert.equal(await page.locator(".workout.editing").count(), 1, "the changes stay on screen to try again");
+    assert.ok(await page.getByRole("button", { name: "Save changes" }).isEnabled());
+    await setOffline(page, false);
+
+    await open(page, "log.html");
+    await setOffline(page, true);
+    const removeCurl = () => page.locator("#today-list li", { hasText: "Dumbbell curl" }).getByRole("button", { name: "Remove" }).click();
+    assert.equal((await noticeAfter(page, removeCurl)).text, "Could not remove it. Check your internet connection and try again.");
+    assert.deepEqual(await todayNames(page), ["Squat", "Dumbbell curl"]);
+    assert.equal((await logSets(page, "Squat", [[60, 5]])).text, "Could not save the workout. Check your internet connection and try again.");
+  } finally {
+    await setOffline(page, false);
   }
-  await setOffline(page, false);
-
-  // While changing a workout in History
-  await open(page, "history.html");
-  await card(page, "20 Nov").getByRole("button", { name: "Edit" }).click();
-  await setOffline(page, true);
-  const failed = await noticeAfter(page, () => page.getByRole("button", { name: "Save changes" }).click());
-  assert.equal(failed.text, "Could not save your changes. Check your internet connection and try again.");
-  assert.equal(await page.locator(".workout.editing").count(), 1, "the changes stay on screen to try again");
-  assert.ok(await page.getByRole("button", { name: "Save changes" }).isEnabled());
-  await setOffline(page, false);
-
-  // While removing or saving on the Log page
-  await open(page, "log.html");
-  await setOffline(page, true);
-  const removeCurl = () => page.locator("#today-list li", { hasText: "Dumbbell curl" }).getByRole("button", { name: "Remove" }).click();
-  assert.equal((await noticeAfter(page, removeCurl)).text, "Could not remove it. Check your internet connection and try again.");
-  assert.deepEqual(await todayNames(page), ["Squat", "Dumbbell curl"]);
-  assert.equal((await logSets(page, "Squat", [[60, 5]])).text, "Could not save the workout. Check your internet connection and try again.");
-  await setOffline(page, false);
 });
 
 test("21. while a page loads, nobody sees the made-up sample workouts", async () => {
@@ -647,6 +664,44 @@ test("21. while a page loads, nobody sees the made-up sample workouts", async ()
     assert.equal(await slow.locator("h1").evaluate((el) => getComputedStyle(el).visibility), "visible", `${file} appears once loaded`);
   }
   await slow.context().close();
+});
+
+test("21b. a page you have opened before shows at once, even on a slow connection", async (t) => {
+  const setFake = (change) => page.evaluate((code) => {
+    const state = JSON.parse(localStorage.getItem("fakeFirebase"));
+    new Function("s", code)(state);
+    localStorage.setItem("fakeFirebase", JSON.stringify(state));
+  }, change);
+  const timeToShow = async (file) => {
+    const start = Date.now();
+    await open(page, file);
+    return Date.now() - start;
+  };
+  try {
+    await open(page, "history.html"); // makes sure there is a copy
+    await setFake("s.delay = 1500"); // every request to Firebase now takes 1.5 seconds
+    const withCopy = await timeToShow("history.html");
+    assert.ok(withCopy < 1000, `History took ${withCopy} ms even though it has a copy`);
+    assert.match(await page.locator("#workout-list").innerText(), /20 Nov/);
+
+    // Without the copy it has to wait for Firebase, like before
+    await page.evaluate(() => Object.keys(localStorage).filter((k) => k.startsWith("gymtrack-copy:")).forEach((k) => localStorage.removeItem(k)));
+    const withoutCopy = await timeToShow("history.html");
+    assert.ok(withoutCopy > 1500, `without a copy it took ${withoutCopy} ms`);
+    t.diagnostic(`History on a slow connection: ${withCopy} ms with the copy, ${withoutCopy} ms without`);
+
+    // A workout saved on another device appears by itself after the background check
+    await setFake(`s.delay = 300; s.docs["users/" + s.current + "/workouts/phone1"] =
+      { date: "2026-11-18", savedAt: 1, sets: [{ exerciseName: "Squat", reps: 3, weight: 65 }] };`);
+    await open(page, "history.html");
+    assert.deepEqual(await shownDates(page), ["20 Nov", "9 Nov"], "first the copy");
+    await card(page, "18 Nov").waitFor();
+    assert.deepEqual(await shownDates(page), ["20 Nov", "18 Nov", "9 Nov"], "then the new workout");
+  } finally {
+    // Back to normal for the next steps
+    await setFake(`s.delay = 20; delete s.docs["users/" + s.current + "/workouts/phone1"];`);
+    await page.evaluate(() => Object.keys(localStorage).filter((k) => k.startsWith("gymtrack-copy:")).forEach((k) => localStorage.removeItem(k)));
+  }
 });
 
 test("22. phone size: nothing sticks out sideways, including Edit", async () => {
@@ -673,6 +728,8 @@ test("23. log out, and every page then needs you to log in", async () => {
   await open(page, "log.html");
   await page.click("#logout-button");
   await arriveAt(page, "index.html");
+  // Logging out deletes the copy of your data in this browser
+  await page.waitForFunction(() => !Object.keys(localStorage).some((k) => k.startsWith("gymtrack-copy:")), null, { timeout: 3000 });
   for (const file of ["log.html", "history.html", "exercises.html", "bests.html", "plan.html"]) {
     await page.goto(base + file);
     await arriveAt(page, "index.html");

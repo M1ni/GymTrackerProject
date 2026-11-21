@@ -18,7 +18,9 @@ const workout = (date, ...sets) => new Workout(`w${nextId++}`, date, sets.map(([
 
 // The stand-in database, with one logged-in user "u1"
 const fakeState = () => JSON.parse(localStorage.getItem("fakeFirebase"));
-beforeEach(() => {
+beforeEach(async () => {
+  await Database.reset(); // like opening a new page
+  localStorage.clear(); // including the copy of the data kept in the "browser"
   localStorage.setItem("fakeFirebase", JSON.stringify({
     accounts: { "a@b.co": { uid: "u1", email: "a@b.co", password: "secret1" } },
     current: "u1", docs: {}, nextId: 1, calls: [], resetEmails: [], offline: false
@@ -420,4 +422,126 @@ test("a chosen plan is saved, loaded back and forgotten", async () => {
   assert.equal(await TrainingPlan.load("u1"), plan);
   await TrainingPlan.stop("u1");
   assert.equal(await TrainingPlan.load("u1"), null);
+});
+
+// ---------- The copy of your data in the browser (so pages open at once) ----------
+
+const setFake = (change) => {
+  const state = fakeState();
+  change(state);
+  localStorage.setItem("fakeFirebase", JSON.stringify(state));
+};
+const timed = async (work) => {
+  const start = Date.now();
+  const result = await work();
+  return [result, Date.now() - start];
+};
+
+test("a page opened again gets the copy at once, even on a slow connection", async () => {
+  await saveDoc("2026-11-13", 1, "Squat", 100);
+  await Database.reset(); // a new page: the first load asks Firebase
+  setFake((s) => { s.delay = 300; });
+  const [first, slow] = await timed(() => Database.getAll("users/u1/workouts"));
+  assert.ok(slow >= 280, `the first time waits for Firebase (${slow} ms)`);
+
+  await Database.reset(); // the next page
+  const [second, fast] = await timed(() => Database.getAll("users/u1/workouts"));
+  assert.ok(fast < 50, `the next time uses the copy (${fast} ms)`);
+  assert.deepEqual(second, first);
+});
+
+test("the background check updates the copy, and only says so when something really changed", async () => {
+  await saveDoc("2026-11-13", 1, "Squat", 100);
+  await Exercise.add("u1", "Squat", "weights");
+  await Database.getAll("users/u1/workouts");
+  await Database.getAll("users/u1/exercises");
+
+  // Same data from Firebase (even if fields come back in another order): nothing to do
+  await Database.reset();
+  const told = [];
+  Database.whenNewData((path) => told.push(path));
+  setFake((s) => {
+    for (const path of Object.keys(s.docs)) {
+      s.docs[path] = Object.fromEntries(Object.entries(s.docs[path]).reverse());
+    }
+  });
+  await Database.getAll("users/u1/workouts");
+  await Database.getAll("users/u1/exercises");
+  await Database.settled();
+  assert.deepEqual(told, []);
+
+  // Something saved on another device: the page is told, and the copy is updated
+  await Database.reset();
+  Database.whenNewData((path) => told.push(path));
+  setFake((s) => { s.docs["users/u1/workouts/phone1"] = { date: "2026-11-14", savedAt: 9, sets: [{ exerciseName: "Squat", reps: 3, weight: 110 }] }; });
+  const shown = await Database.getAll("users/u1/workouts");
+  assert.equal(shown.length, 1, "the copy is shown first");
+  await Database.settled();
+  assert.deepEqual(told, ["users/u1/workouts"]);
+  await Database.reset();
+  assert.equal((await Database.getAll("users/u1/workouts")).length, 2, "the copy now has it");
+});
+
+test("saving keeps the copy up to date", async () => {
+  const exercise = await Exercise.add("u1", "Squat");
+  await Database.getAll("users/u1/exercises");
+  await Database.getAll("users/u1/workouts");
+  await TrainingPlan.load("u1");
+  await Exercise.add("u1", "Plank", "timed");
+  await Exercise.addMissing("u1", ["Pull-ups"], []);
+  await exercise.update("u1", "Back squat", "weights", []);
+  await new Workout(null, "2026-11-13", [new WorkoutSet("Back squat", 5, 100)]).save("u1");
+  await TrainingPlan.findPlan("Build muscle", "Beginner", "3").use("u1");
+
+  // Read again from the copy only: Firebase is switched off
+  await Database.reset();
+  setFake((s) => { s.offline = true; });
+  assert.deepEqual((await Exercise.getAll("u1")).map((e) => e.name), ["Back squat", "Plank", "Pull-ups"]);
+  assert.equal((await WorkoutHistory.load("u1")).workouts.length, 1);
+  assert.equal((await TrainingPlan.load("u1")).name, "Push, legs, pull");
+
+  setFake((s) => { s.offline = false; });
+  const history = await WorkoutHistory.load("u1");
+  await history.workouts[0].delete("u1");
+  await TrainingPlan.stop("u1");
+  await Database.reset();
+  setFake((s) => { s.offline = true; });
+  assert.equal((await WorkoutHistory.load("u1")).workouts.length, 0, "deleted from the copy too");
+  assert.equal(await TrainingPlan.load("u1"), null);
+});
+
+test("a check that finishes after something was saved does not undo it", async () => {
+  await Database.getAll("users/u1/exercises");
+  await Database.reset();
+  setFake((s) => { s.delay = 200; });
+  const told = [];
+  Database.whenNewData((path) => told.push(path));
+  await Database.getAll("users/u1/exercises"); // from the copy; the check is still running
+  setFake((s) => { s.delay = 0; });
+  await Exercise.add("u1", "Squat"); // saved while the check runs
+  await Database.settled();
+  assert.deepEqual(told, []);
+  await Database.reset();
+  setFake((s) => { s.offline = true; });
+  assert.deepEqual((await Exercise.getAll("u1")).map((e) => e.name), ["Squat"]);
+});
+
+test("with no connection, the copy is shown and the page is told", async () => {
+  await Database.getAll("users/u1/exercises");
+  await Database.reset();
+  let noConnection = false;
+  Database.whenNoConnection(() => { noConnection = true; });
+  setFake((s) => { s.offline = true; });
+  assert.deepEqual(await Database.getAll("users/u1/exercises"), []);
+  await Database.settled();
+  assert.ok(noConnection);
+});
+
+test("logging out deletes the copy", async () => {
+  await Exercise.add("u1", "Squat");
+  await Database.getAll("users/u1/exercises");
+  const copies = () => [...Array(localStorage.length).keys()].map((i) => localStorage.key(i)).filter((k) => k.startsWith("gymtrack-copy:"));
+  assert.ok(copies().length > 0);
+  await User.logOut();
+  assert.deepEqual(copies(), []);
 });

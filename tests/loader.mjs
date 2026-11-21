@@ -23,5 +23,9 @@ globalThis.localStorage = {
   getItem: (key) => (memory.has(key) ? memory.get(key) : null),
   setItem: (key, value) => memory.set(key, String(value)),
   removeItem: (key) => memory.delete(key),
-  clear: () => memory.clear()
+  clear: () => memory.clear(),
+  key: (index) => [...memory.keys()][index] ?? null,
+  get length() {
+    return memory.size;
+  }
 };
