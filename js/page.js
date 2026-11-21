@@ -2,6 +2,7 @@
 import { User } from "./user.js";
 import { isConfigured } from "./firebase.js";
 import { drawAllBarbells } from "./plates.js";
+import { Database } from "./database.js";
 
 const emailText = document.getElementById("user-email");
 const notice = document.getElementById("notice");
@@ -16,6 +17,8 @@ let whenReady = null;
 // Each page calls this with the code that loads its real data.
 // It runs once we know who is logged in. In preview mode it never runs,
 // so the sample data in the HTML stays on the page.
+// It can run a second time (with again = true) if Firebase has newer data than
+// the copy in this browser that the page showed first.
 export function whenLoggedIn(callback) {
   whenReady = callback;
 }
@@ -41,9 +44,20 @@ if (isConfigured) {
   User.watch(async (user) => {
     if (user) {
       emailText.textContent = user.email;
+
+      // Newer data than the copy shown (e.g. saved on your phone): show the page again with it
+      let showAgain = null;
+      Database.whenNewData(() => {
+        clearTimeout(showAgain);
+        showAgain = setTimeout(() => whenReady && whenReady(user, true), 50);
+      });
+      Database.whenNoConnection(() => {
+        showNotice("No connection right now, so this shows your data from your last visit. New changes may not save.");
+      });
+
       try {
         if (whenReady) {
-          await whenReady(user); // wait until the page has loaded the user's data
+          await whenReady(user, false); // wait until the page has the user's data
         }
       } finally {
         showPage();

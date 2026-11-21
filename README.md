@@ -22,6 +22,7 @@ Also:
 - Following a plan: **Use this plan** saves it, and the Log page then shows each day's exercises; tap one to fill in its sets with last time's weight
 - Bodyweight exercises (like pull-ups) and timed ones (like a plank, in seconds), with bests in reps or seconds
 - Renaming an exercise, which also renames it in your past workouts
+- Fast pages: your data is kept in the browser, so a page you have opened before shows at once while Firebase is checked in the background (the copy is deleted when you log out)
 - Forgot password, fixing a workout afterwards (change a weight or reps, or remove a set), a "Today so far" list while you log, a message when you beat your personal best, and the total weight lifted for each workout and week
 
 ## Files
@@ -34,7 +35,7 @@ Also:
 - `js/user.js`: the `User` class from the class diagram (register, log in, log out)
 - `js/login.js`: code for the log in page
 - `js/page.js`: shared code for the other pages (shows the email, log out, sends logged-out users to the log in page)
-- `js/database.js`: the `Database` class, the one place that reads and writes Firebase
+- `js/database.js`: the `Database` class, the one place that reads and writes Firebase (with Firestore Lite), and keeps the copy of your data in the browser
 - `js/exercise.js`, `js/workout.js`, `js/history.js`: the `Exercise`, `Workout`, `WorkoutSet` and `WorkoutHistory` classes from the class diagram
 - `js/exercises-page.js`, `js/log.js`, `js/history-page.js`: code for the Exercises (F2), Log workout (F3) and History with search (F4, F5) pages
 - `js/bests-page.js`: the Personal bests page (F6)

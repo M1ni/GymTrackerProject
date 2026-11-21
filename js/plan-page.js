@@ -104,11 +104,12 @@ form.addEventListener("submit", (event) => {
 showPlan();
 
 // Once we know who is logged in, show their plan if they chose one
-whenLoggedIn(async (user) => {
+// again is true when the page is shown again with newer data: keep the user's choices
+whenLoggedIn(async (user, again) => {
   uid = user.uid;
   try {
     savedPlan = await TrainingPlan.load(uid);
-    if (savedPlan) {
+    if (savedPlan && !again) {
       goal.value = savedPlan.goal;
       level.value = savedPlan.level;
       days.value = String(savedPlan.daysPerWeek);

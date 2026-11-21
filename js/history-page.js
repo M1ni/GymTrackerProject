@@ -230,14 +230,19 @@ function filterSample() {
   subtitle.textContent = words.length ? `${shown} of 5 sample workouts match "${searchBox.value.trim()}"` : "5 workouts in the last two weeks";
 }
 
-whenLoggedIn(async (user) => {
+// again is true when the page is shown again with newer data
+whenLoggedIn(async (user, again) => {
   uid = user.uid;
-  list.innerHTML = '<section class="card"><p class="muted">Loading your workouts…</p></section>';
+  if (!again) {
+    list.innerHTML = '<section class="card"><p class="muted">Loading your workouts…</p></section>';
+  }
   try {
     history = await WorkoutHistory.load(uid);
     // The Edit link on the Log page opens a workout ready to change, e.g. history.html#edit-2026-11-13
     const link = location.hash.match(/^#edit-(\d{4}-\d{2}-\d{2})$/);
-    if (link) {
+    if (again && editing) {
+      editing = history.onDate(editing.date) || null; // keep the same workout open
+    } else if (link) {
       editing = history.onDate(link[1]) || null;
       window.history.replaceState(null, "", "history.html");
     }

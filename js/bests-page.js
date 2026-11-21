@@ -46,9 +46,12 @@ function render(history) {
     </tr>`).join("");
 }
 
-whenLoggedIn(async (user) => {
-  top.innerHTML = '<p class="muted">Loading your personal bests…</p>';
-  listCard.hidden = true;
+// again is true when the page is shown again with newer data
+whenLoggedIn(async (user, again) => {
+  if (!again) {
+    top.innerHTML = '<p class="muted">Loading your personal bests…</p>';
+    listCard.hidden = true;
+  }
   try {
     render(await WorkoutHistory.load(user.uid));
   } catch (error) {

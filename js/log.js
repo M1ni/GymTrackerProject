@@ -528,16 +528,17 @@ form.addEventListener("submit", async (event) => {
 
 // ---------- Start ----------
 
-whenLoggedIn(async (user) => {
+// again is true when the page is shown again with newer data: keep what was typed
+whenLoggedIn(async (user, again) => {
   uid = user.uid;
-  resetSets();
+  if (!again) resetSets();
   try {
     [exercises, history, plan] = await Promise.all([
       Exercise.getAll(uid),
       WorkoutHistory.load(uid),
       TrainingPlan.load(uid)
     ]);
-    fillExerciseList();
+    fillExerciseList(again ? exerciseSelect.value : undefined);
     exerciseChanged();
     updateToday();
     updatePlanCard();

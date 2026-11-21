@@ -8,6 +8,7 @@ import {
   sendPasswordResetEmail
 } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-auth.js";
 import { auth } from "./firebase.js";
+import { Database } from "./database.js";
 
 export class User {
   constructor(uid, email) {
@@ -27,9 +28,10 @@ export class User {
     return new User(result.user.uid, result.user.email);
   }
 
-  // FR2: log out.
+  // FR2: log out. The copy of your data in this browser is deleted too.
   static async logOut() {
     await signOut(auth);
+    Database.forgetCopy();
   }
 
   // Forgot password: Firebase emails a link where you choose a new password.
@@ -45,6 +47,8 @@ export class User {
       if (firebaseUser) {
         whenChecked(new User(firebaseUser.uid, firebaseUser.email));
       } else {
+        // Nobody is logged in (logged out, maybe in another tab): no copy of anyone's data stays
+        Database.forgetCopy();
         whenChecked(null);
       }
     });

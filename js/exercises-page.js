@@ -208,11 +208,17 @@ form.addEventListener("submit", async (event) => {
   addButton.disabled = false;
 });
 
-whenLoggedIn(async (user) => {
+// again is true when the page is shown again with newer data
+whenLoggedIn(async (user, again) => {
   uid = user.uid;
-  list.innerHTML = '<tr><td colspan="5" class="muted">Loading your exercises…</td></tr>';
+  if (!again) {
+    list.innerHTML = '<tr><td colspan="5" class="muted">Loading your exercises…</td></tr>';
+  }
   try {
     [exercises, history] = await Promise.all([Exercise.getAll(uid), WorkoutHistory.load(uid)]);
+    if (editing) {
+      editing = exercises.find((e) => e.id === editing.id) || null; // keep the same one open
+    }
     render();
   } catch (error) {
     list.innerHTML = '<tr><td colspan="5" class="muted">Could not load your exercises. Refresh the page to try again.</td></tr>';
