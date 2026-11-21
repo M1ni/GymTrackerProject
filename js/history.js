@@ -13,22 +13,36 @@ export class WorkoutHistory {
     const rows = await Database.getAll(`users/${uid}/workouts`);
     // In the order they were saved (older saves have no savedAt, so they go first)
     rows.sort((a, b) => (a.savedAt || 0) - (b.savedAt || 0));
-
-    // "Save workout" saves each exercise as its own document, so put the documents
-    // from the same day back together: one Workout per date (one gym session).
-    const workouts = [];
+    const history = new WorkoutHistory([]);
     rows.forEach((row) => {
       const sets = row.sets.map((s) => new WorkoutSet(s.exerciseName, s.reps, s.weight));
-      const sameDay = workouts.find((w) => w.date === row.date);
-      if (sameDay) {
-        sameDay.sets.push(...sets);
-        sameDay.ids.push(row.id);
-      } else {
-        workouts.push(new Workout(row.id, row.date, sets));
-      }
+      history.add(new Workout(row.id, row.date, sets));
     });
-    workouts.sort((a, b) => b.date.localeCompare(a.date));
-    return new WorkoutHistory(workouts);
+    return history;
+  }
+
+  // Adds a saved workout, keeping the list newest first.
+  // "Save workout" saves each exercise as its own document, so a workout on a date
+  // that is already here is joined to it: one Workout per date (one gym session).
+  add(workout) {
+    const sameDay = this.onDate(workout.date);
+    if (sameDay) {
+      sameDay.sets.push(...workout.sets);
+      sameDay.ids.push(...workout.ids);
+    } else {
+      this.workouts.push(workout);
+      this.workouts.sort((a, b) => b.date.localeCompare(a.date));
+    }
+  }
+
+  // The workout on one date, e.g. "2026-11-13", or undefined if there is none.
+  onDate(date) {
+    return this.workouts.find((w) => w.date === date);
+  }
+
+  // Takes a deleted workout out of the list.
+  remove(workout) {
+    this.workouts = this.workouts.filter((w) => w !== workout);
   }
 
   // All the sets done for one exercise, with the date of each, newest first.

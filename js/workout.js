@@ -9,6 +9,11 @@ export class WorkoutSet {
   }
 }
 
+// Firebase stores plain objects, not class objects
+function toPlain(sets) {
+  return sets.map((s) => ({ exerciseName: s.exerciseName, reps: s.reps, weight: s.weight }));
+}
+
 export class Workout {
   // date is a "YYYY-MM-DD" string, sets is a list of WorkoutSet
   constructor(id, date, sets) {
@@ -16,7 +21,7 @@ export class Workout {
     this.date = date;
     this.sets = sets;
     // Every "Save workout" saves one document, so one gym session with 3 exercises
-    // is 3 documents. ids lists all of them (see WorkoutHistory.load).
+    // is 3 documents. ids lists all of them (see WorkoutHistory.add).
     this.ids = id ? [id] : [];
   }
 
@@ -26,10 +31,24 @@ export class Workout {
       date: this.date,
       // So the exercises of one day are shown in the order they were done
       savedAt: Date.now(),
-      // Firebase stores plain objects, not class objects
-      sets: this.sets.map((s) => ({ exerciseName: s.exerciseName, reps: s.reps, weight: s.weight }))
+      sets: toPlain(this.sets)
     });
     this.ids = [this.id];
+  }
+
+  // Saves a changed list of sets, e.g. after fixing a wrong weight or removing a set.
+  // All of the day's sets go into its first document and the other documents
+  // are deleted, in one go (see Database.replace).
+  async saveChanges(uid, sets) {
+    const [first, ...others] = this.ids;
+    await Database.replace(
+      `users/${uid}/workouts/${first}`,
+      { sets: toPlain(sets) },
+      others.map((id) => `users/${uid}/workouts/${id}`)
+    );
+    this.id = first;
+    this.ids = [first];
+    this.sets = sets;
   }
 
   // Deletes the whole workout (every document saved for it).

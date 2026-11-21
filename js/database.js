@@ -5,7 +5,8 @@ import {
   addDoc,
   getDocs,
   deleteDoc,
-  doc
+  doc,
+  writeBatch
 } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore.js";
 import { db } from "./firebase.js";
 
@@ -25,5 +26,15 @@ export class Database {
   // Deletes one document, e.g. "users/abc/exercises/xyz".
   static async delete(path) {
     await deleteDoc(doc(db, path));
+  }
+
+  // Changes some fields of one document and deletes other documents, all in one go:
+  // either every change is saved or none is, so a lost connection halfway
+  // cannot leave a workout half changed.
+  static async replace(path, data, pathsToDelete) {
+    const batch = writeBatch(db);
+    batch.update(doc(db, path), data);
+    pathsToDelete.forEach((p) => batch.delete(doc(db, p)));
+    await batch.commit();
   }
 }

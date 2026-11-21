@@ -80,6 +80,12 @@ export function heaviest(sets) {
   return sets.reduce((max, s) => Math.max(max, s.weight), 0);
 }
 
+// The total weight lifted: reps × weight of every set, added up, e.g. "4,350".
+export function volume(sets) {
+  const total = sets.reduce((sum, s) => sum + s.reps * s.weight, 0);
+  return Math.round(total).toLocaleString("en-GB");
+}
+
 // Makes text safe to put inside HTML (so a name like "<b>" shows as text).
 export function escapeHtml(text) {
   return String(text)
